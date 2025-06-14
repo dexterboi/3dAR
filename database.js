@@ -7,16 +7,26 @@ class ModelDatabase {
 
   // Initialize Supabase client
   async init() {
-    if (this.initialized) return;
+    if (this.initialized) return true;
     
     try {
-      // Import Supabase client
-      if (typeof window.supabase === 'undefined') {
-        console.error('Supabase client not loaded');
+      // Check for Supabase client - try different ways it might be loaded
+      let supabaseClient = null;
+      
+      if (typeof window.supabase !== 'undefined') {
+        supabaseClient = window.supabase;
+      } else if (typeof supabase !== 'undefined') {
+        supabaseClient = supabase;
+      } else if (typeof window.Supabase !== 'undefined') {
+        supabaseClient = window.Supabase;
+      }
+      
+      if (!supabaseClient) {
+        console.error('Supabase client not loaded - make sure the script is included');
         return false;
       }
       
-      this.supabase = window.supabase.createClient(
+      this.supabase = supabaseClient.createClient(
         SUPABASE_CONFIG.url,
         SUPABASE_CONFIG.anonKey
       );
@@ -136,6 +146,11 @@ class ModelDatabase {
       console.error('Failed to fetch model:', error);
       throw error;
     }
+  }
+
+  // Alias for getModelById (for compatibility)
+  async getModel(id) {
+    return this.getModelById(id);
   }
 
   // Update model metadata

@@ -177,7 +177,14 @@
     <div class="status-messages" id="statusMessages"></div>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script>
+      // Fallback check for Supabase
+      if (typeof supabase === 'undefined') {
+        console.error('Supabase failed to load from primary CDN, trying fallback...');
+        document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"><\/script>');
+      }
+    </script>
     <script src="config.js"></script>
     <script src="database.js"></script>
     <script src="gallery.js"></script>
