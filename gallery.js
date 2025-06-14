@@ -409,7 +409,7 @@ class ModelGalleryApp {
     // For mobile devices, open directly
     if (/Mobi|Android/i.test(navigator.userAgent)) {
       window.open(modelUrl, '_blank');
-      this.showMessage('AR viewer opened! Tap "View in your space" for AR experience.', 'success');
+      this.showMessage('AR viewer opened! Use "View in AR" button for AR experience.', 'success');
     } else {
       // For desktop, show QR code modal or copy link
       this.copyModelLink(id);
@@ -426,11 +426,11 @@ class ModelGalleryApp {
     if (newTitle && newTitle !== model.title) {
       try {
         await modelDB.updateModel(id, { title: newTitle });
-        this.showMessage('Model updated successfully', 'success');
-        await this.loadModels();
+        this.showMessage('Model updated successfully!', 'success');
+        this.loadModels(); // Refresh the list
       } catch (error) {
-        console.error('Update failed:', error);
-        this.showMessage('Update failed: ' + error.message, 'error');
+        console.error('Error updating model:', error);
+        this.showMessage('Failed to update model', 'error');
       }
     }
   }
