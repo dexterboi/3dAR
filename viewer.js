@@ -29,7 +29,9 @@ class WebXRModelViewer {
     this.modelId = this.getUrlParameter('id');
     
     if (!this.modelId) {
-      this.showError('No model ID provided');
+      // For testing, use a default model ID if none provided
+      console.warn('No model ID provided in URL, using test mode');
+      this.showError('No model ID provided. Add ?id=YOUR_MODEL_ID to the URL');
       return;
     }
     
@@ -484,16 +486,48 @@ class WebXRModelViewer {
   }
 
   showMainContent() {
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('modelContainer').style.display = 'block';
-    document.getElementById('qrSection').style.display = 'block';
-    document.getElementById('modelInfo').style.display = 'block';
+    const loadingScreen = document.getElementById('loadingScreen');
+    const modelContainer = document.getElementById('modelContainer');
+    const qrSection = document.getElementById('qrSection');
+    const modelInfo = document.getElementById('modelInfo');
+    
+    if (loadingScreen) {
+      loadingScreen.style.display = 'none';
+    }
+    
+    if (modelContainer) {
+      modelContainer.style.display = 'block';
+    }
+    
+    if (qrSection) {
+      qrSection.style.display = 'block';
+    }
+    
+    if (modelInfo) {
+      modelInfo.style.display = 'block';
+    }
   }
 
   showError(message) {
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('errorMessage').textContent = message;
-    document.getElementById('errorScreen').style.display = 'block';
+    const loadingScreen = document.getElementById('loadingScreen');
+    const errorScreen = document.getElementById('errorScreen');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    if (loadingScreen) {
+      loadingScreen.style.display = 'none';
+    }
+    
+    if (errorMessage) {
+      errorMessage.textContent = message;
+    }
+    
+    if (errorScreen) {
+      errorScreen.style.display = 'block';
+    } else {
+      // Fallback if error screen doesn't exist
+      console.error('Error screen not found, showing alert:', message);
+      alert('Error: ' + message);
+    }
   }
 
   showMessage(message, type = 'info') {
