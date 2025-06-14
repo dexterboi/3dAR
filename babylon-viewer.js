@@ -127,15 +127,27 @@ class BabylonViewerApp {
     
     // Create scene
     this.scene = new BABYLON.Scene(this.engine);
-    this.scene.createDefaultCameraOrLights(true, true, true);
     
-    // Setup camera
-    this.camera = this.scene.activeCamera;
+    // Setup camera manually
+    this.camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 10, BABYLON.Vector3.Zero(), this.scene);
     this.camera.setTarget(BABYLON.Vector3.Zero());
     this.camera.attachControls(canvas, true);
     
-    // Enable physics (optional for AR interactions)
-    this.scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), new BABYLON.CannonJSPlugin());
+    // Set camera limits
+    this.camera.lowerRadiusLimit = 2;
+    this.camera.upperRadiusLimit = 20;
+    this.camera.lowerBetaLimit = 0.1;
+    this.camera.upperBetaLimit = Math.PI / 2;
+    
+    // Enable physics (optional for AR interactions) - but make it optional
+    try {
+      // Only enable physics if CannonJS is available
+      if (typeof CANNON !== 'undefined') {
+        this.scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), new BABYLON.CannonJSPlugin());
+      }
+    } catch (error) {
+      console.warn('Physics engine not available, continuing without physics:', error);
+    }
     
     // Add lighting
     const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), this.scene);
@@ -149,6 +161,9 @@ class BabylonViewerApp {
     const shadowGenerator = new BABYLON.ShadowGenerator(1024, dirLight);
     shadowGenerator.useBlurExponentialShadowMap = true;
     shadowGenerator.blurKernel = 32;
+    
+    // Store shadow generator for later use
+    this.shadowGenerator = shadowGenerator;
     
     // Create ground for AR
     const ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 10, height: 10}, this.scene);
@@ -212,15 +227,10 @@ class BabylonViewerApp {
       let boundingInfo = null;
       result.meshes.forEach((mesh, index) => {
         if (mesh.geometry) {
-          // Enable shadows
-          this.scene.lights.forEach(light => {
-            if (light.getShadowGenerator) {
-              const shadowGen = light.getShadowGenerator();
-              if (shadowGen) {
-                shadowGen.addShadowCaster(mesh);
-              }
-            }
-          });
+          // Enable shadows using the stored shadow generator
+          if (this.shadowGenerator) {
+            this.shadowGenerator.addShadowCaster(mesh);
+          }
           
           // Calculate bounding box
           if (!boundingInfo) {
