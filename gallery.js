@@ -314,22 +314,24 @@ class ModelGalleryApp {
     const qrContainer = document.getElementById(`qr-${model.id}`);
     if (!qrContainer) return;
     
-    const modelUrl = `${APP_CONFIG.baseUrl}/ar-modelviewer.html?id=${model.id}`;
+    // Create AR-direct URL (adds ?ar=true parameter for immediate AR launch)
+    const modelUrl = `${APP_CONFIG.baseUrl}/ar-modelviewer.html?id=${model.id}&ar=true`;
     
     try {
       // Clear container first
       qrContainer.innerHTML = '';
       
       // Use QR Server API - free and reliable
-      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(modelUrl)}`;
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(modelUrl)}&bgcolor=ffffff&color=000000&margin=5`;
       
       // Create QR code image
       const qrImage = document.createElement('img');
       qrImage.src = qrApiUrl;
-      qrImage.alt = `QR Code for ${model.title}`;
+      qrImage.alt = `AR QR Code for ${model.title}`;
       qrImage.style.borderRadius = '8px';
       qrImage.style.maxWidth = '100px';
       qrImage.style.maxHeight = '100px';
+      qrImage.title = 'Scan to launch AR directly!';
       
       // Add loading placeholder while image loads
       qrContainer.innerHTML = '<div class="qr-loading" style="display: flex; align-items: center; justify-content: center; height: 100px; color: #718096; font-size: 0.8rem;"><i class="fas fa-spinner fa-spin"></i></div>';
@@ -338,6 +340,12 @@ class ModelGalleryApp {
       qrImage.onload = () => {
         qrContainer.innerHTML = '';
         qrContainer.appendChild(qrImage);
+        
+        // Add AR indicator
+        const arIndicator = document.createElement('div');
+        arIndicator.style.cssText = 'font-size: 0.7rem; color: #48bb78; font-weight: 600; margin-top: 5px; text-align: center;';
+        arIndicator.innerHTML = '📱 Direct AR';
+        qrContainer.appendChild(arIndicator);
       };
       
       // Handle image error
@@ -346,7 +354,7 @@ class ModelGalleryApp {
         qrContainer.innerHTML = '<div class="qr-error" style="text-align: center; color: #f56565; font-size: 0.8rem;">QR Error</div>';
       };
       
-      // Store QR code reference for download functionality
+      // Store QR code reference for download functionality (AR-direct URL)
       this.qrCodes.set(model.id, { url: modelUrl, qrUrl: qrApiUrl });
       
     } catch (error) {
@@ -404,16 +412,17 @@ class ModelGalleryApp {
   }
 
   openAR(id) {
-    const modelUrl = `${APP_CONFIG.baseUrl}/ar-modelviewer.html?id=${id}`;
+    // Create AR-direct URL that immediately launches AR
+    const modelUrl = `${APP_CONFIG.baseUrl}/ar-modelviewer.html?id=${id}&ar=true`;
     
     // For mobile devices, open directly
     if (/Mobi|Android/i.test(navigator.userAgent)) {
       window.open(modelUrl, '_blank');
-      this.showMessage('AR viewer opened! Tap "View in AR" for native AR experience.', 'success');
+      this.showMessage('AR launching! 🚀 Camera will open automatically.', 'success');
     } else {
       // For desktop, show QR code modal or copy link
       this.copyModelLink(id);
-      this.showMessage('Link copied! Open on your mobile device for AR experience.', 'info');
+      this.showMessage('AR link copied! Open on your mobile device - AR will launch automatically.', 'info');
     }
   }
 
@@ -454,11 +463,12 @@ class ModelGalleryApp {
   }
 
   async copyModelLink(id) {
-    const modelUrl = `${APP_CONFIG.baseUrl}/ar-modelviewer.html?id=${id}`;
+    // Use AR-direct URL for sharing
+    const modelUrl = `${APP_CONFIG.baseUrl}/ar-modelviewer.html?id=${id}&ar=true`;
     
     try {
       await navigator.clipboard.writeText(modelUrl);
-      this.showMessage('Model link copied to clipboard!', 'success');
+      this.showMessage('AR link copied to clipboard! 📋', 'success');
     } catch (error) {
       console.error('Copy failed:', error);
       this.showMessage('Failed to copy link', 'error');
@@ -467,21 +477,29 @@ class ModelGalleryApp {
 
   async shareModel(id) {
     const model = this.models.find(m => m.id === id);
-    const modelUrl = `${APP_CONFIG.baseUrl}/ar-modelviewer.html?id=${id}`;
+    if (!model) return;
     
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: model.title,
-          text: `Check out this 3D model: ${model.title}`,
-          url: modelUrl
-        });
-      } catch (error) {
-        console.error('Share failed:', error);
-        this.copyModelLink(id);
+    // Use AR-direct URL for sharing
+    const modelUrl = `${APP_CONFIG.baseUrl}/ar-modelviewer.html?id=${id}&ar=true`;
+    
+    const shareData = {
+      title: `${model.title} - AR Experience`,
+      text: `Check out this 3D model in AR! Opens camera automatically: ${model.title}`,
+      url: modelUrl
+    };
+    
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        this.showMessage('Shared successfully! 📤', 'success');
+      } else {
+        // Fallback to copy link
+        await navigator.clipboard.writeText(modelUrl);
+        this.showMessage('AR link copied to clipboard! 📋', 'success');
       }
-    } else {
-      this.copyModelLink(id);
+    } catch (error) {
+      console.error('Share failed:', error);
+      this.showMessage('Share failed', 'error');
     }
   }
 

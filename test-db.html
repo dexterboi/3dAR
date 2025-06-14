@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .test-btn:hover {
+            background: #0056b3;
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { border-left-color: #28a745; }
+        .error { border-left-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Database Connection Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Check Dependencies</h2>
+        <button class="test-btn" onclick="checkDependencies()">Check Supabase & Config</button>
+        <div id="dependencyResults" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Test Database Connection</h2>
+        <button class="test-btn" onclick="testConnection()">Test Database Connection</button>
+        <div id="connectionResults" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. List All Products</h2>
+        <button class="test-btn" onclick="listProducts()">Get All Products</button>
+        <div id="productResults" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Test Specific Product</h2>
+        <input type="text" id="productId" placeholder="Enter product ID" style="padding: 8px; margin: 5px;">
+        <button class="test-btn" onclick="testProduct()">Test Product Load</button>
+        <div id="specificResults" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Load dependencies -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script>
+      // Fallback check for Supabase
+      if (typeof supabase === 'undefined') {
+        console.error('Supabase failed to load from primary CDN, trying fallback...');
+        document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"><\/script>');
+      }
+    </script>
+    <script src="config.js"></script>
+    <script src="database.js"></script>
+    
+    <script>
+        function checkDependencies() {
+            const resultDiv = document.getElementById('dependencyResults');
+            let results = '';
+            
+            results += '🔍 Checking Dependencies...\n\n';
+            
+            // Check Supabase
+            if (typeof supabase !== 'undefined') {
+                results += '✅ Supabase: Loaded\n';
+            } else {
+                results += '❌ Supabase: NOT LOADED\n';
+            }
+            
+            // Check Config
+            if (typeof window.APP_CONFIG !== 'undefined') {
+                results += '✅ APP_CONFIG: Loaded\n';
+                results += `   Base URL: ${window.APP_CONFIG.baseUrl}\n`;
+                results += `   Supabase URL: ${window.APP_CONFIG.supabase?.url || 'Not set'}\n`;
+            } else {
+                results += '❌ APP_CONFIG: NOT LOADED\n';
+            }
+            
+            // Check Database
+            if (typeof window.modelDB !== 'undefined') {
+                results += '✅ modelDB: Loaded\n';
+            } else {
+                results += '❌ modelDB: NOT LOADED\n';
+            }
+            
+            resultDiv.textContent = results;
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result ' + (results.includes('❌') ? 'error' : 'success');
+        }
+        
+        async function testConnection() {
+            const resultDiv = document.getElementById('connectionResults');
+            let results = '';
+            
+            try {
+                results += '🔄 Testing Database Connection...\n\n';
+                
+                if (!window.modelDB) {
+                    throw new Error('modelDB not available');
+                }
+                
+                results += '⏳ Initializing database...\n';
+                const initialized = await window.modelDB.init();
+                
+                if (initialized) {
+                    results += '✅ Database connection successful!\n';
+                } else {
+                    results += '❌ Database initialization failed\n';
+                }
+                
+            } catch (error) {
+                results += `❌ Connection Error: ${error.message}\n`;
+            }
+            
+            resultDiv.textContent = results;
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result ' + (results.includes('❌') ? 'error' : 'success');
+        }
+        
+        async function listProducts() {
+            const resultDiv = document.getElementById('productResults');
+            let results = '';
+            
+            try {
+                results += '📦 Loading All Products...\n\n';
+                
+                if (!window.modelDB) {
+                    throw new Error('modelDB not available');
+                }
+                
+                await window.modelDB.init();
+                const products = await window.modelDB.getAllModels();
+                
+                results += `Found ${products.length} products:\n\n`;
+                
+                if (products.length === 0) {
+                    results += '❌ NO PRODUCTS FOUND!\n';
+                    results += 'This is why you see the helmet - no products in database.\n';
+                    results += 'You need to upload some 3D models first!\n';
+                } else {
+                    products.forEach((product, index) => {
+                        results += `${index + 1}. ${product.title}\n`;
+                        results += `   ID: ${product.id}\n`;
+                        results += `   File: ${product.file_url}\n`;
+                        results += `   Size: ${product.file_size} bytes\n\n`;
+                    });
+                }
+                
+            } catch (error) {
+                results += `❌ Error: ${error.message}\n`;
+            }
+            
+            resultDiv.textContent = results;
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result ' + (results.includes('❌') ? 'error' : 'success');
+        }
+        
+        async function testProduct() {
+            const productId = document.getElementById('productId').value.trim();
+            const resultDiv = document.getElementById('specificResults');
+            let results = '';
+            
+            if (!productId) {
+                results = '❌ Please enter a product ID';
+                resultDiv.textContent = results;
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                return;
+            }
+            
+            try {
+                results += `🔍 Testing Product: ${productId}\n\n`;
+                
+                if (!window.modelDB) {
+                    throw new Error('modelDB not available');
+                }
+                
+                await window.modelDB.init();
+                const product = await window.modelDB.getModel(productId);
+                
+                if (product) {
+                    results += '✅ Product found!\n\n';
+                    results += `Title: ${product.title}\n`;
+                    results += `Description: ${product.description}\n`;
+                    results += `File URL: ${product.file_url}\n`;
+                    results += `File Size: ${product.file_size} bytes\n`;
+                    results += `Upload Date: ${product.upload_date}\n`;
+                } else {
+                    results += '❌ Product not found!\n';
+                    results += 'This ID does not exist in the database.\n';
+                }
+                
+            } catch (error) {
+                results += `❌ Error: ${error.message}\n`;
+            }
+            
+            resultDiv.textContent = results;
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result ' + (results.includes('❌') ? 'error' : 'success');
+        }
+        
+        // Auto-check dependencies on load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(checkDependencies, 1000);
+        });
+    </script>
+</body>
+</html> 
