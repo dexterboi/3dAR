@@ -409,19 +409,12 @@ class ModelGalleryApp {
     // For mobile devices, open directly
     if (/Mobi|Android/i.test(navigator.userAgent)) {
       window.open(modelUrl, '_blank');
+      this.showMessage('AR viewer opened! Tap "View in your space" for AR experience.', 'success');
     } else {
       // For desktop, show QR code modal or copy link
       this.copyModelLink(id);
       this.showMessage('Link copied! Open on your mobile device for AR experience.', 'info');
     }
-  }
-
-  openEnhancedAR(id) {
-    const arUrl = `${APP_CONFIG.baseUrl}/ar-viewer.html?id=${id}`;
-    
-    // Open enhanced AR viewer
-    window.open(arUrl, '_blank');
-    this.showMessage('Enhanced AR viewer opened! Better surface placement and tracking.', 'success');
   }
 
   async editModel(id) {
@@ -655,12 +648,6 @@ function viewModel(id) {
 function openAR(id) {
   if (window.galleryApp) {
     window.galleryApp.openAR(id);
-  }
-}
-
-function openEnhancedAR(id) {
-  if (window.galleryApp) {
-    window.galleryApp.openEnhancedAR(id);
   }
 }
 

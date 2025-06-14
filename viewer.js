@@ -56,6 +56,18 @@ class ModelViewerApp {
         modelViewer.addEventListener('progress', this.onProgress);
         modelViewer.addEventListener('load', this.onModelLoad.bind(this));
         modelViewer.addEventListener('error', this.onModelError.bind(this));
+        
+        // AR status events
+        modelViewer.addEventListener('ar-status', (event) => {
+          console.log('AR Status:', event.detail.status);
+          if (event.detail.status === 'session-started') {
+            this.showMessage('AR session started! Place your model by tapping.', 'success');
+          } else if (event.detail.status === 'not-presenting') {
+            console.log('AR session ended');
+          } else if (event.detail.status === 'failed') {
+            this.showMessage('AR failed to start. Try again or use a different device.', 'error');
+          }
+        });
       }
     });
 
@@ -68,7 +80,6 @@ class ModelViewerApp {
     const closeFullscreenBtn = document.getElementById('closeFullscreen');
     const downloadQRBtn = document.getElementById('downloadQR');
     const copyUrlBtn = document.getElementById('copyUrl');
-    const enhancedARBtn = document.getElementById('enhancedAR');
 
     if (resetBtn) {
       resetBtn.addEventListener('click', () => this.resetView());
@@ -100,10 +111,6 @@ class ModelViewerApp {
     
     if (copyUrlBtn) {
       copyUrlBtn.addEventListener('click', () => this.copyUrl());
-    }
-
-    if (enhancedARBtn) {
-      enhancedARBtn.addEventListener('click', () => this.openEnhancedAR());
     }
 
     // Keyboard shortcuts
@@ -147,7 +154,7 @@ class ModelViewerApp {
       // Update UI with model information
       this.updateModelInfo(model);
       
-      // Generate QR code (will show loading if QRCode not ready)
+      // Generate QR code
       this.generateQRCode();
       
       // Show main content
@@ -169,11 +176,15 @@ class ModelViewerApp {
     // Set model source
     modelViewer.src = model.file_url;
     
-    // Set poster if available (you might want to add poster generation)
-    // modelViewer.poster = model.poster_url;
+    // Configure AR settings for better compatibility
+    modelViewer.setAttribute('ar', '');
+    modelViewer.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
+    modelViewer.setAttribute('ar-scale', 'auto');
     
     // Update page meta for social sharing
     this.updateMetaTags(model);
+    
+    console.log('Model viewer configured with AR support');
   }
 
   updateModelInfo(model) {
@@ -297,7 +308,7 @@ class ModelViewerApp {
 
   onModelLoad() {
     console.log('Model loaded successfully');
-    this.showMessage('Model loaded successfully!', 'success');
+    this.showMessage('Model loaded successfully! Tap "View in your space" for AR.', 'success');
   }
 
   onModelError(event) {
@@ -441,17 +452,6 @@ class ModelViewerApp {
     }
   }
 
-  openEnhancedAR() {
-    if (!this.modelId) {
-      this.showMessage('Model not loaded', 'error');
-      return;
-    }
-    
-    const arUrl = `${APP_CONFIG.baseUrl}/ar-viewer.html?id=${this.modelId}`;
-    window.open(arUrl, '_blank');
-    this.showMessage('Enhanced AR viewer opened! Better surface placement and tracking.', 'success');
-  }
-
   // UI State Management
   showLoading() {
     document.getElementById('loadingState').style.display = 'flex';
@@ -559,16 +559,7 @@ if (/Mobi|Android/i.test(navigator.userAgent)) {
     // Add mobile-specific class
     document.body.classList.add('mobile-device');
     
-    // Disable auto-rotate on mobile to save battery
-    const modelViewer = document.querySelector('model-viewer');
-    if (modelViewer) {
-      modelViewer.removeAttribute('auto-rotate');
-      
-      // Update toggle button state
-      const toggleBtn = document.getElementById('toggleRotation');
-      if (toggleBtn) {
-        toggleBtn.innerHTML = '<i class="fas fa-play"></i> Start Rotation';
-      }
-    }
+    // Keep auto-rotate on mobile for better AR experience
+    console.log('Mobile device detected - AR optimizations enabled');
   });
 } 

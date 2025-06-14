@@ -75,13 +75,15 @@
             <!-- <model-viewer> HTML element -->
             <model-viewer 
               id="modelViewer"
-              ar ar-modes="webxr scene-viewer quick-look" 
+              ar 
+              ar-modes="webxr scene-viewer quick-look" 
               camera-controls 
               tone-mapping="neutral" 
               shadow-intensity="1"
               auto-rotate
               rotation-per-second="30deg"
-              loading="lazy">
+              loading="lazy"
+              reveal="interaction">
               
               <div class="progress-bar hide" slot="progress-bar">
                   <div class="update-bar"></div>
@@ -106,9 +108,6 @@
               <button id="takeScreenshot" class="control-btn">
                 <i class="fas fa-camera"></i> Screenshot
               </button>
-              <button id="enhancedAR" class="control-btn enhanced-ar-control">
-                <i class="fas fa-magic"></i> Enhanced AR
-              </button>
             </div>
           </div>
 
@@ -117,12 +116,13 @@
               <h3><i class="fas fa-qrcode"></i> Scan for Mobile AR</h3>
               <div id="qrcode" class="qr-display"></div>
               <div class="qr-info">
-                <p><strong>How to use:</strong></p>
+                <p><strong>How to use AR:</strong></p>
                 <ol>
                   <li>Scan this QR code with your mobile device</li>
                   <li>Open the link in your mobile browser</li>
                   <li>Tap "View in your space" for AR experience</li>
                   <li>Point your camera where you want to place the model</li>
+                  <li>Tap to place and interact with the 3D model</li>
                 </ol>
               </div>
               <div class="qr-actions">
@@ -137,19 +137,23 @@
 
             <!-- Model Information -->
             <div class="model-info-panel">
-              <h3><i class="fas fa-info-circle"></i> Model Information</h3>
+              <h3><i class="fas fa-info-circle"></i> AR Compatibility</h3>
               <div class="info-grid">
                 <div class="info-item">
                   <span class="info-label">Format:</span>
                   <span class="info-value">GLB</span>
                 </div>
                 <div class="info-item">
-                  <span class="info-label">AR Support:</span>
-                  <span class="info-value">WebXR, Scene Viewer, Quick Look</span>
+                  <span class="info-label">iOS AR:</span>
+                  <span class="info-value">Safari 12+ (Quick Look)</span>
                 </div>
                 <div class="info-item">
-                  <span class="info-label">Compatible:</span>
-                  <span class="info-value">iOS Safari, Android Chrome, Desktop</span>
+                  <span class="info-label">Android AR:</span>
+                  <span class="info-value">Chrome 67+ (Scene Viewer)</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">WebXR:</span>
+                  <span class="info-value">Chrome 79+, Edge 79+</span>
                 </div>
                 <div class="info-item">
                   <span class="info-label">File Size:</span>
