@@ -1,12 +1,122 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>3D Model Viewer & AR</title>
+    <title>3D Model Viewer & WebXR AR</title>
     <meta charset="utf-8">
-    <meta name="description" content="3D Model Viewer with AR using Babylon.js WebXR">
+    <meta name="description" content="3D Model Viewer with WebXR AR using Three.js">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link type="text/css" href="./styles.css" rel="stylesheet"/>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+      /* WebXR AR Styles */
+      .ar-container {
+        position: relative;
+        width: 100%;
+        height: 100vh;
+        overflow: hidden;
+      }
+      
+      #webxr-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      
+      .ar-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        pointer-events: none;
+        z-index: 100;
+      }
+      
+      .ar-controls {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 15px;
+        pointer-events: auto;
+      }
+      
+      .ar-button {
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        border: none;
+        padding: 15px 25px;
+        border-radius: 25px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+      }
+      
+      .ar-button:hover {
+        background: rgba(0, 0, 0, 0.9);
+        transform: scale(1.05);
+      }
+      
+      .ar-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      
+      .ar-status {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 14px;
+        pointer-events: auto;
+        backdrop-filter: blur(10px);
+      }
+      
+      .stabilization-message {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        max-width: 300px;
+        pointer-events: auto;
+        backdrop-filter: blur(10px);
+      }
+      
+      .stabilized .stabilization-message {
+        display: none;
+      }
+      
+      .unsupported {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        text-align: center;
+        padding: 20px;
+      }
+      
+      .unsupported i {
+        font-size: 64px;
+        color: #ff6b6b;
+        margin-bottom: 20px;
+      }
+    </style>
   </head>
   <body>
     <div class="container">
@@ -30,7 +140,7 @@
         <div class="loading-content">
           <div class="loading-spinner"></div>
           <h2>Loading 3D Model...</h2>
-          <p id="loadingText">Initializing Babylon.js WebXR viewer...</p>
+          <p id="loadingText">Initializing WebXR AR viewer...</p>
         </div>
       </div>
 
@@ -46,37 +156,46 @@
         </div>
       </div>
 
-      <!-- Babylon.js Model Viewer Container -->
-      <div id="modelContainer" class="model-container" style="display: none;">
-        <!-- Babylon.js Canvas -->
-        <canvas id="babylonCanvas" class="babylon-canvas"></canvas>
-        
-        <!-- AR Controls Overlay -->
-        <div class="ar-controls-overlay">
-          <button id="arButton" class="ar-button" style="display: none;">
-            <i class="fas fa-cube"></i>
-            Enter AR
-          </button>
-          <button id="exitARButton" class="ar-button ar-exit" style="display: none;">
-            <i class="fas fa-times"></i>
-            Exit AR
-          </button>
-        </div>
+      <!-- Unsupported Browser -->
+      <div id="unsupportedScreen" class="unsupported" style="display: none;">
+        <i class="fas fa-mobile-alt"></i>
+        <h2>WebXR AR Not Supported</h2>
+        <p>Your device or browser doesn't support WebXR AR.</p>
+        <p>Try using Chrome on an ARCore-compatible Android device.</p>
+      </div>
 
-        <!-- Model Controls -->
-        <div class="controls">
-          <button id="rotateBtn" class="control-btn">
-            <i class="fas fa-sync-alt"></i>
-            <span>Auto Rotate</span>
-          </button>
-          <button id="resetBtn" class="control-btn">
-            <i class="fas fa-home"></i>
-            <span>Reset View</span>
-          </button>
-          <button id="screenshotBtn" class="control-btn">
-            <i class="fas fa-camera"></i>
-            <span>Screenshot</span>
-          </button>
+      <!-- WebXR AR Container -->
+      <div id="arContainer" class="ar-container" style="display: none;">
+        <canvas id="webxr-canvas"></canvas>
+        
+        <!-- AR Overlay -->
+        <div class="ar-overlay">
+          <!-- Status -->
+          <div id="arStatus" class="ar-status">
+            Ready for AR
+          </div>
+          
+          <!-- Stabilization Message -->
+          <div class="stabilization-message">
+            <h3><i class="fas fa-camera"></i> Finding Surfaces</h3>
+            <p>Move your device around to help detect surfaces in your environment.</p>
+          </div>
+          
+          <!-- Controls -->
+          <div class="ar-controls">
+            <button id="startARBtn" class="ar-button">
+              <i class="fas fa-cube"></i>
+              Start AR
+            </button>
+            <button id="exitARBtn" class="ar-button" style="display: none;">
+              <i class="fas fa-times"></i>
+              Exit AR
+            </button>
+            <button id="placeModelBtn" class="ar-button" style="display: none;">
+              <i class="fas fa-plus"></i>
+              Place Model
+            </button>
+          </div>
         </div>
       </div>
 
@@ -114,7 +233,7 @@
       <!-- Model Info -->
       <div id="modelInfo" class="model-info" style="display: none;">
         <h2 id="modelTitle">3D Model</h2>
-        <p id="modelDescription">Interactive 3D model with WebXR AR support via Babylon.js</p>
+        <p id="modelDescription">Interactive 3D model with WebXR AR support</p>
         <div class="model-stats">
           <div class="stat">
             <i class="fas fa-file-alt"></i>
@@ -126,7 +245,7 @@
           </div>
           <div class="stat">
             <i class="fas fa-vr-cardboard"></i>
-            <span>Babylon.js WebXR</span>
+            <span>WebXR AR</span>
           </div>
         </div>
       </div>
@@ -136,14 +255,14 @@
         <div class="instructions-content">
           <h3><i class="fas fa-info-circle"></i> WebXR AR Instructions</h3>
           <ol>
-            <li><strong>Desktop:</strong> Scan QR code with mobile device for instant WebXR AR</li>
-            <li><strong>Mobile:</strong> Tap "Enter AR" button for immersive AR experience</li>
-            <li><strong>Android:</strong> Works with Chrome browser WebXR support</li>
-            <li><strong>iOS:</strong> Works with Safari WebXR (iOS 14.3+)</li>
+            <li><strong>Desktop:</strong> Scan QR code with mobile device for WebXR AR</li>
+            <li><strong>Mobile:</strong> Tap "Start AR" button for immersive AR experience</li>
+            <li><strong>Android:</strong> Requires Chrome browser with ARCore support</li>
+            <li><strong>Placement:</strong> Tap screen to place models on detected surfaces</li>
           </ol>
           <p class="ar-note">
             <i class="fas fa-rocket"></i>
-            <strong>Powered by Babylon.js:</strong> Advanced WebXR with surface detection and realistic lighting!
+            <strong>Powered by WebXR:</strong> Official Google AR technology with surface detection!
           </p>
         </div>
       </div>
@@ -158,19 +277,14 @@
         document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"><\/script>');
       }
     </script>
-    <!-- Babylon.js Core -->
-    <script src="https://cdn.babylonjs.com/babylon.js"></script>
-    <!-- Babylon.js Loaders -->
-    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
-    <!-- Babylon.js Materials -->
-    <script src="https://cdn.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
-    <!-- Babylon.js GUI -->
-    <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
-    <!-- CannonJS Physics Engine -->
-    <script src="https://cdn.babylonjs.com/cannon.js"></script>
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/webxr/VRButton.js"></script>
     
     <script src="config.js"></script>
     <script src="database.js"></script>
-    <script src="babylon-viewer.js?v=2"></script>
+    <script src="webxr-viewer.js?v=1"></script>
   </body>
 </html> 
