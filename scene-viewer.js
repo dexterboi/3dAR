@@ -71,6 +71,14 @@ class SceneViewerApp {
         return;
       }
       
+      console.log('Model data loaded:', {
+        id: model.id,
+        title: model.title,
+        file_path: model.file_path,
+        file_url: model.file_url,
+        file_size: model.file_size
+      });
+      
       this.currentModel = model;
       
       // Update UI with model data
@@ -96,9 +104,29 @@ class SceneViewerApp {
       this.updateLoadingText('Loading 3D model...');
       
       this.modelViewer = document.getElementById('modelViewer');
-      const modelUrl = `${SUPABASE_CONFIG.url}/storage/v1/object/public/models/${model.file_path}`;
+      
+      // Use the stored file_url directly, or construct it properly
+      let modelUrl;
+      if (model.file_url) {
+        modelUrl = model.file_url;
+      } else {
+        // If no file_url, construct it properly (file_path already includes "models/")
+        modelUrl = `${SUPABASE_CONFIG.url}/storage/v1/object/public/${model.file_path}`;
+      }
       
       console.log('Loading model from:', modelUrl);
+      
+      // Test if the URL is accessible
+      try {
+        const response = await fetch(modelUrl, { method: 'HEAD' });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        console.log('Model URL is accessible');
+      } catch (fetchError) {
+        console.error('Model URL test failed:', fetchError);
+        throw new Error(`Model file not accessible: ${fetchError.message}`);
+      }
       
       // Set the model source
       this.modelViewer.src = modelUrl;
@@ -106,7 +134,7 @@ class SceneViewerApp {
       // Wait for model to load
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
-          reject(new Error('Model loading timeout'));
+          reject(new Error('Model loading timeout (30s)'));
         }, 30000); // 30 second timeout
         
         this.modelViewer.addEventListener('load', () => {
@@ -116,7 +144,8 @@ class SceneViewerApp {
         
         this.modelViewer.addEventListener('error', (event) => {
           clearTimeout(timeout);
-          reject(new Error('Model failed to load: ' + event.detail?.message || 'Unknown error'));
+          const errorMsg = event.detail?.message || event.detail?.type || 'Unknown model-viewer error';
+          reject(new Error(`Model failed to load: ${errorMsg}`));
         }, { once: true });
       });
       
@@ -124,7 +153,20 @@ class SceneViewerApp {
       
     } catch (error) {
       console.error('Error loading 3D model:', error);
-      throw error;
+      
+      // Show user-friendly error message
+      let userMessage = 'Failed to load 3D model. ';
+      if (error.message.includes('CORS')) {
+        userMessage += 'This may be a cross-origin issue. Try accessing the model directly.';
+      } else if (error.message.includes('404')) {
+        userMessage += 'Model file not found on server.';
+      } else if (error.message.includes('timeout')) {
+        userMessage += 'Model took too long to load. Check your internet connection.';
+      } else {
+        userMessage += error.message;
+      }
+      
+      throw new Error(userMessage);
     }
   }
 
