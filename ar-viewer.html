@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced AR Viewer</title>
+    <meta name="description" content="Advanced AR viewer with surface placement and stable tracking">
+    
+    <!-- AR.js and A-Frame -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+    
+    <!-- WebXR Polyfill for better compatibility -->
+    <script src="https://cdn.jsdelivr.net/npm/webxr-polyfill@latest/build/webxr-polyfill.min.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            overflow: hidden;
+        }
+        
+        .ar-ui {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+            padding: 20px;
+            color: white;
+        }
+        
+        .ar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .ar-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .close-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .ar-instructions {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .ar-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .control-btn {
+            background: rgba(255,255,255,0.9);
+            border: none;
+            color: #333;
+            padding: 12px 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn:hover {
+            background: white;
+            transform: translateY(-2px);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            color: white;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .error-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+        
+        .retry-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+        
+        /* Hide A-Frame loading screen */
+        .a-loader-title {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <h2>Initializing AR Experience</h2>
+        <p>Please allow camera access and wait for AR to load...</p>
+    </div>
+    
+    <!-- Error Screen -->
+    <div class="error-screen" id="errorScreen">
+        <div class="error-icon">⚠️</div>
+        <h2>AR Not Available</h2>
+        <p id="errorMessage">Your device doesn't support AR or camera access was denied.</p>
+        <button class="retry-btn" onclick="initAR()">Try Again</button>
+        <button class="retry-btn" onclick="goBack()" style="background: #6c757d; margin-left: 10px;">Go Back</button>
+    </div>
+    
+    <!-- AR UI -->
+    <div class="ar-ui" id="arUI" style="display: none;">
+        <div class="ar-header">
+            <div class="ar-title" id="modelTitle">3D Model AR View</div>
+            <button class="close-btn" onclick="goBack()">✕ Close</button>
+        </div>
+        <div class="ar-instructions">
+            <strong>📱 How to use AR:</strong><br>
+            • Point your camera at a flat surface<br>
+            • Tap to place the 3D model<br>
+            • Pinch to resize, drag to move<br>
+            • Walk around to view from different angles
+        </div>
+    </div>
+    
+    <!-- AR Controls -->
+    <div class="ar-controls" id="arControls" style="display: none;">
+        <button class="control-btn" onclick="resetModel()">🔄 Reset</button>
+        <button class="control-btn" onclick="toggleScale()">📏 Resize</button>
+        <button class="control-btn" onclick="takeScreenshot()">📸 Photo</button>
+    </div>
+    
+    <!-- A-Frame AR Scene -->
+    <a-scene
+        id="arScene"
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+        vr-mode-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: true; colorManagement: true; sortObjects: true;"
+        loading-screen="enabled: false"
+        style="display: none;">
+        
+        <!-- Assets -->
+        <a-assets>
+            <!-- Model will be loaded dynamically -->
+        </a-assets>
+        
+        <!-- AR Camera -->
+        <a-camera
+            id="arCamera"
+            gps-camera
+            rotation-reader
+            look-controls="enabled: false"
+            arjs-look-controls="smoothingFactor: 0.1"
+            cursor="rayOrigin: mouse">
+        </a-camera>
+        
+        <!-- Lighting -->
+        <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
+        <a-light type="directional" position="0 5 0" color="#ffffff" intensity="0.8"></a-light>
+        
+        <!-- Ground plane for surface detection -->
+        <a-plane
+            id="groundPlane"
+            position="0 0 -2"
+            rotation="-90 0 0"
+            width="10"
+            height="10"
+            color="#7BC8A4"
+            opacity="0.3"
+            visible="false"
+            material="transparent: true">
+        </a-plane>
+        
+        <!-- 3D Model Container -->
+        <a-entity
+            id="modelContainer"
+            position="0 0 -1.5"
+            scale="1 1 1"
+            visible="false">
+            <!-- Model will be added here -->
+        </a-entity>
+        
+        <!-- Placement indicator -->
+        <a-ring
+            id="placementRing"
+            position="0 0.01 -1.5"
+            rotation="-90 0 0"
+            radius-inner="0.1"
+            radius-outer="0.15"
+            color="#007bff"
+            opacity="0.8"
+            visible="false"
+            animation="property: rotation; to: -90 360 0; loop: true; dur: 3000">
+        </a-ring>
+    </a-scene>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="database.js"></script>
+    
+    <script>
+        let currentModel = null;
+        let modelEntity = null;
+        let isModelPlaced = false;
+        let currentScale = 1;
+        
+        // Get model ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const modelId = urlParams.get('id');
+        
+        // Initialize AR
+        async function initAR() {
+            try {
+                console.log('Initializing AR...');
+                
+                if (!modelId) {
+                    showError('No model ID provided');
+                    return;
+                }
+                
+                // Initialize database
+                await modelDB.init();
+                
+                // Load model data
+                currentModel = await modelDB.getModelById(modelId);
+                if (!currentModel) {
+                    showError('Model not found');
+                    return;
+                }
+                
+                // Update UI
+                document.getElementById('modelTitle').textContent = currentModel.title;
+                
+                // Check AR support
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    showError('Camera access not supported on this device');
+                    return;
+                }
+                
+                // Request camera permission
+                await navigator.mediaDevices.getUserMedia({ video: true });
+                
+                // Initialize A-Frame scene
+                setupARScene();
+                
+            } catch (error) {
+                console.error('AR initialization failed:', error);
+                showError('Failed to initialize AR: ' + error.message);
+            }
+        }
+        
+        function setupARScene() {
+            const scene = document.getElementById('arScene');
+            const modelContainer = document.getElementById('modelContainer');
+            
+            // Create model entity
+            modelEntity = document.createElement('a-gltf-model');
+            modelEntity.setAttribute('src', currentModel.file_url);
+            modelEntity.setAttribute('scale', '0.5 0.5 0.5');
+            modelEntity.setAttribute('rotation', '0 0 0');
+            modelEntity.setAttribute('animation-mixer', '');
+            
+            // Add touch/click interactions
+            modelEntity.setAttribute('cursor-listener', '');
+            modelEntity.setAttribute('gesture-handler', '');
+            
+            // Add to container
+            modelContainer.appendChild(modelEntity);
+            
+            // Show AR scene
+            scene.style.display = 'block';
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('arUI').style.display = 'block';
+            document.getElementById('arControls').style.display = 'flex';
+            
+            // Setup interactions
+            setupInteractions();
+            
+            console.log('AR scene initialized successfully');
+        }
+        
+        function setupInteractions() {
+            const scene = document.getElementById('arScene');
+            const modelContainer = document.getElementById('modelContainer');
+            const placementRing = document.getElementById('placementRing');
+            
+            // Touch/click to place model
+            scene.addEventListener('click', function(event) {
+                if (!isModelPlaced) {
+                    // Place model at touch point
+                    const intersection = event.detail.intersection;
+                    if (intersection) {
+                        const position = intersection.point;
+                        modelContainer.setAttribute('position', `${position.x} ${position.y} ${position.z}`);
+                        modelContainer.setAttribute('visible', true);
+                        placementRing.setAttribute('position', `${position.x} ${position.y + 0.01} ${position.z}`);
+                        placementRing.setAttribute('visible', true);
+                        isModelPlaced = true;
+                        
+                        // Hide placement ring after 2 seconds
+                        setTimeout(() => {
+                            placementRing.setAttribute('visible', false);
+                        }, 2000);
+                    }
+                }
+            });
+            
+            // Register gesture handler component
+            AFRAME.registerComponent('gesture-handler', {
+                init: function() {
+                    this.handleScale = this.handleScale.bind(this);
+                    this.handleRotation = this.handleRotation.bind(this);
+                    
+                    this.el.addEventListener('touchstart', this.handleTouchStart.bind(this));
+                    this.el.addEventListener('touchmove', this.handleTouchMove.bind(this));
+                    this.el.addEventListener('touchend', this.handleTouchEnd.bind(this));
+                },
+                
+                handleTouchStart: function(event) {
+                    this.initialTouchCount = event.touches.length;
+                    if (event.touches.length === 2) {
+                        this.initialDistance = this.getDistance(event.touches[0], event.touches[1]);
+                        this.initialScale = this.el.getAttribute('scale');
+                    }
+                },
+                
+                handleTouchMove: function(event) {
+                    if (event.touches.length === 2 && this.initialDistance) {
+                        const currentDistance = this.getDistance(event.touches[0], event.touches[1]);
+                        const scaleFactor = currentDistance / this.initialDistance;
+                        const newScale = this.initialScale.x * scaleFactor;
+                        
+                        // Limit scale
+                        const clampedScale = Math.max(0.1, Math.min(3, newScale));
+                        this.el.setAttribute('scale', `${clampedScale} ${clampedScale} ${clampedScale}`);
+                        currentScale = clampedScale;
+                    }
+                },
+                
+                handleTouchEnd: function(event) {
+                    this.initialDistance = null;
+                },
+                
+                getDistance: function(touch1, touch2) {
+                    const dx = touch1.clientX - touch2.clientX;
+                    const dy = touch1.clientY - touch2.clientY;
+                    return Math.sqrt(dx * dx + dy * dy);
+                }
+            });
+        }
+        
+        // Control functions
+        function resetModel() {
+            if (modelEntity) {
+                document.getElementById('modelContainer').setAttribute('position', '0 0 -1.5');
+                document.getElementById('modelContainer').setAttribute('scale', '0.5 0.5 0.5');
+                document.getElementById('modelContainer').setAttribute('rotation', '0 0 0');
+                document.getElementById('modelContainer').setAttribute('visible', false);
+                document.getElementById('placementRing').setAttribute('visible', false);
+                isModelPlaced = false;
+                currentScale = 0.5;
+            }
+        }
+        
+        function toggleScale() {
+            if (modelEntity && isModelPlaced) {
+                currentScale = currentScale === 0.5 ? 1.0 : 0.5;
+                document.getElementById('modelContainer').setAttribute('scale', `${currentScale} ${currentScale} ${currentScale}`);
+            }
+        }
+        
+        function takeScreenshot() {
+            const scene = document.getElementById('arScene');
+            const canvas = scene.components.renderer.renderer.domElement;
+            
+            // Create download link
+            const link = document.createElement('a');
+            link.download = `${currentModel?.title || 'ar-model'}-screenshot.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            
+            // Show feedback
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✅ Saved!';
+            setTimeout(() => {
+                btn.textContent = originalText;
+            }, 2000);
+        }
+        
+        function showError(message) {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('errorScreen').style.display = 'flex';
+            document.getElementById('errorMessage').textContent = message;
+        }
+        
+        function goBack() {
+            if (document.referrer) {
+                window.history.back();
+            } else {
+                window.location.href = 'gallery.html';
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initAR);
+        
+        // Handle orientation changes
+        window.addEventListener('orientationchange', function() {
+            setTimeout(() => {
+                const scene = document.getElementById('arScene');
+                if (scene.components.renderer) {
+                    scene.components.renderer.renderer.setSize(window.innerWidth, window.innerHeight);
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html> 

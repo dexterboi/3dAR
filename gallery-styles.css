@@ -373,7 +373,8 @@
 }
 
 .view-btn,
-.ar-btn {
+.ar-btn,
+.enhanced-ar-btn {
   background: rgba(255, 255, 255, 0.9);
   color: #4a5568;
   border: none;
@@ -392,6 +393,11 @@
 
 .ar-btn:hover {
   background: #48bb78;
+  color: white;
+}
+
+.enhanced-ar-btn:hover {
+  background: #9f7aea;
   color: white;
 }
 

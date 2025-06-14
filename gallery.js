@@ -416,6 +416,14 @@ class ModelGalleryApp {
     }
   }
 
+  openEnhancedAR(id) {
+    const arUrl = `${APP_CONFIG.baseUrl}/ar-viewer.html?id=${id}`;
+    
+    // Open enhanced AR viewer
+    window.open(arUrl, '_blank');
+    this.showMessage('Enhanced AR viewer opened! Better surface placement and tracking.', 'success');
+  }
+
   async editModel(id) {
     // Simple edit functionality - could be expanded to a modal
     const model = this.models.find(m => m.id === id);
@@ -647,6 +655,12 @@ function viewModel(id) {
 function openAR(id) {
   if (window.galleryApp) {
     window.galleryApp.openAR(id);
+  }
+}
+
+function openEnhancedAR(id) {
+  if (window.galleryApp) {
+    window.galleryApp.openEnhancedAR(id);
   }
 }
 
