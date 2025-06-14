@@ -338,8 +338,22 @@
         </div>
     </div>
 
+    <!-- Load Supabase FIRST -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script>
-        // Available 3D models
+      // Fallback check for Supabase
+      if (typeof supabase === 'undefined') {
+        console.error('Supabase failed to load from primary CDN, trying fallback...');
+        document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"><\/script>');
+      }
+    </script>
+
+    <!-- Load database BEFORE the main script -->
+    <script src="config.js"></script>
+    <script src="database.js"></script>
+
+    <script>
+        // Available 3D models (fallback)
         const models = [
             {
                 name: "Damaged Helmet",
@@ -365,6 +379,7 @@
         
         let currentModelIndex = 0;
         let isAutoRotating = true;
+        let currentProductModel = null; // Store the loaded product model
         
         // Get model viewer element
         const modelViewer = document.getElementById('modelViewer');
@@ -378,11 +393,19 @@
             const urlParams = new URLSearchParams(window.location.search);
             const modelId = urlParams.get('id');
             
-            if (modelId) {
+            console.log('🔍 URL Parameters:', { modelId });
+            
+            if (modelId && modelId !== 'test') {
+                console.log('📦 Loading product from database:', modelId);
                 loadModelFromDatabase(modelId);
-            } else {
-                // Use default model
+            } else if (modelId === 'test') {
+                console.log('🧪 Test mode - using default model');
                 updateModelInfo(models[currentModelIndex]);
+                hideLoading();
+            } else {
+                console.log('🎯 No model ID - using default');
+                updateModelInfo(models[currentModelIndex]);
+                hideLoading();
             }
             
             // Setup event listeners
@@ -422,46 +445,83 @@
         
         async function loadModelFromDatabase(modelId) {
             try {
-                showLoading('Loading model from database...');
+                console.log('🔄 Starting database load for model:', modelId);
+                showLoading('Loading your 3D model...');
                 
                 // Wait for database to be available
+                console.log('⏳ Waiting for database...');
                 await waitForDatabase();
+                console.log('✅ Database available');
+                
+                // Check if modelDB exists
+                if (!window.modelDB) {
+                    throw new Error('Database not available');
+                }
                 
                 // Initialize database
+                console.log('🔧 Initializing database...');
                 const initialized = await window.modelDB.init();
                 if (!initialized) {
                     throw new Error('Database connection failed');
                 }
+                console.log('✅ Database initialized');
                 
                 // Get model data
+                console.log('📥 Fetching model data...');
                 const model = await window.modelDB.getModel(modelId);
+                console.log('📦 Model data received:', model);
+                
                 if (!model) {
-                    throw new Error('Model not found');
+                    throw new Error('Model not found in database');
                 }
                 
-                // Update model viewer
+                if (!model.file_url) {
+                    throw new Error('Model file URL not found');
+                }
+                
+                // Store the product model
+                currentProductModel = model;
+                
+                // Update model viewer with YOUR product
+                console.log('🎯 Loading your model:', model.file_url);
                 modelViewer.src = model.file_url;
                 document.getElementById('modelTitle').textContent = model.title;
-                document.getElementById('modelDescription').textContent = model.description || 'Interactive 3D model with AR support';
+                document.getElementById('modelDescription').textContent = model.description || 'Your 3D model with AR support';
                 
-                console.log('✅ Model loaded from database:', model.title);
+                console.log('✅ Your model loaded successfully:', model.title);
+                showStatus(`Loaded: ${model.title}`, 'success');
                 
             } catch (error) {
                 console.error('❌ Database loading error:', error);
-                showStatus('Failed to load model from database - using default', 'error');
+                console.log('🔄 Falling back to default model');
+                showStatus(`Failed to load your model: ${error.message} - Using default`, 'error');
+                
+                // Fallback to default model
                 updateModelInfo(models[currentModelIndex]);
+                hideLoading();
             }
         }
         
         async function waitForDatabase() {
             let attempts = 0;
-            while (!window.modelDB && attempts < 50) {
+            while (!window.modelDB && attempts < 100) { // Increased attempts
+                console.log(`⏳ Waiting for database... attempt ${attempts + 1}`);
                 await new Promise(resolve => setTimeout(resolve, 100));
                 attempts++;
+            }
+            
+            if (!window.modelDB) {
+                throw new Error('Database failed to load after 10 seconds');
             }
         }
         
         function switchModel() {
+            // If we have a product model, don't switch to demo models
+            if (currentProductModel) {
+                showStatus('This is your product model - switch disabled', 'info');
+                return;
+            }
+            
             currentModelIndex = (currentModelIndex + 1) % models.length;
             const model = models[currentModelIndex];
             
@@ -473,7 +533,7 @@
         }
         
         function updateModelInfo(model) {
-            document.getElementById('modelTitle').textContent = model.name;
+            document.getElementById('modelTitle').textContent = model.name || model.title;
             document.getElementById('modelDescription').textContent = model.description;
         }
         
@@ -539,10 +599,25 @@
         console.log('📱 This uses native AR on Android (Scene Viewer) and iOS (AR Quick Look)');
         console.log('✅ No markers needed - uses surface detection');
         console.log('🚀 Works on both HTTP and HTTPS');
+        console.log('🔍 Available globals:', {
+            supabase: typeof supabase,
+            modelDB: typeof window.modelDB,
+            APP_CONFIG: typeof window.APP_CONFIG
+        });
+        
+        // Check Supabase loading
+        if (typeof supabase === 'undefined') {
+            console.error('❌ Supabase not loaded! This will cause database errors.');
+        } else {
+            console.log('✅ Supabase loaded successfully');
+        }
+        
+        // Check config
+        if (typeof window.APP_CONFIG === 'undefined') {
+            console.error('❌ APP_CONFIG not loaded! Check config.js');
+        } else {
+            console.log('✅ APP_CONFIG loaded:', window.APP_CONFIG);
+        }
     </script>
-    
-    <!-- Load database if available -->
-    <script src="config.js"></script>
-    <script src="database.js"></script>
 </body>
 </html> 

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Viewer Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .test-btn:hover {
+            background: #0056b3;
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 AR Viewer Debug Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Direct Viewer Tests</h2>
+        <p>Test each viewer directly:</p>
+        <button class="test-btn" onclick="window.open('ar-modelviewer.html', '_blank')">
+            📱 Google Model Viewer (NEW)
+        </button>
+        <button class="test-btn" onclick="window.open('viewer.html', '_blank')">
+            🔧 WebXR Viewer (OLD)
+        </button>
+        <button class="test-btn" onclick="window.open('ar-simple.html', '_blank')">
+            🎯 AR.js Simple
+        </button>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Gallery Function Tests</h2>
+        <p>Test what the gallery functions actually call:</p>
+        <button class="test-btn" onclick="testViewModel()">
+            Test viewModel() Function
+        </button>
+        <button class="test-btn" onclick="testOpenAR()">
+            Test openAR() Function
+        </button>
+        <div id="functionResults" class="result" style="display: none;">
+            <h4>Function Test Results:</h4>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. URL Tests with Product ID</h2>
+        <p>Test viewers with actual product ID:</p>
+        <button class="test-btn" onclick="window.open('ar-modelviewer.html?id=test', '_blank')">
+            📱 Google Model Viewer + ID
+        </button>
+        <button class="test-btn" onclick="window.open('viewer.html?id=test', '_blank')">
+            🔧 WebXR Viewer + ID
+        </button>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Expected Behavior</h2>
+        <div class="result">
+            <h4>✅ What Should Happen:</h4>
+            <ul>
+                <li><strong>Gallery "View" button</strong> → Opens ar-modelviewer.html with your product</li>
+                <li><strong>Gallery "AR" button</strong> → Opens ar-modelviewer.html with your product</li>
+                <li><strong>QR codes</strong> → Point to ar-modelviewer.html with product ID</li>
+                <li><strong>All products</strong> → Use Google Model Viewer (same as the demo)</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Load gallery functions for testing -->
+    <script src="config.js"></script>
+    <script src="database.js"></script>
+    <script src="gallery.js?v=2"></script>
+    
+    <script>
+        function testViewModel() {
+            const resultDiv = document.getElementById('functionResults');
+            const contentDiv = document.getElementById('resultContent');
+            
+            // Override window.open to capture the URL
+            const originalOpen = window.open;
+            let capturedUrl = '';
+            
+            window.open = function(url, target) {
+                capturedUrl = url;
+                console.log('viewModel() would open:', url);
+                return { focus: () => {} }; // Mock window object
+            };
+            
+            // Test the function
+            try {
+                if (typeof viewModel === 'function') {
+                    viewModel('test-id');
+                    contentDiv.innerHTML = `
+                        <strong>viewModel('test-id') calls:</strong><br>
+                        <code>${capturedUrl}</code><br>
+                        ${capturedUrl.includes('ar-modelviewer.html') ? 
+                            '<span style="color: green;">✅ CORRECT - Uses Google Model Viewer</span>' : 
+                            '<span style="color: red;">❌ WRONG - Uses old viewer</span>'}
+                    `;
+                } else {
+                    contentDiv.innerHTML = '<span style="color: red;">❌ viewModel function not found</span>';
+                }
+            } catch (error) {
+                contentDiv.innerHTML = `<span style="color: red;">❌ Error: ${error.message}</span>`;
+            }
+            
+            // Restore original window.open
+            window.open = originalOpen;
+            resultDiv.style.display = 'block';
+        }
+        
+        function testOpenAR() {
+            const resultDiv = document.getElementById('functionResults');
+            const contentDiv = document.getElementById('resultContent');
+            
+            // Override window.open to capture the URL
+            const originalOpen = window.open;
+            let capturedUrl = '';
+            
+            window.open = function(url, target) {
+                capturedUrl = url;
+                console.log('openAR() would open:', url);
+                return { focus: () => {} }; // Mock window object
+            };
+            
+            // Test the function
+            try {
+                if (typeof openAR === 'function') {
+                    openAR('test-id');
+                    contentDiv.innerHTML = `
+                        <strong>openAR('test-id') calls:</strong><br>
+                        <code>${capturedUrl}</code><br>
+                        ${capturedUrl.includes('ar-modelviewer.html') ? 
+                            '<span style="color: green;">✅ CORRECT - Uses Google Model Viewer</span>' : 
+                            '<span style="color: red;">❌ WRONG - Uses old viewer</span>'}
+                    `;
+                } else {
+                    contentDiv.innerHTML = '<span style="color: red;">❌ openAR function not found</span>';
+                }
+            } catch (error) {
+                contentDiv.innerHTML = `<span style="color: red;">❌ Error: ${error.message}</span>`;
+            }
+            
+            // Restore original window.open
+            window.open = originalOpen;
+            resultDiv.style.display = 'block';
+        }
+        
+        // Show current configuration
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 Debug page loaded');
+            console.log('📁 Available functions:', {
+                viewModel: typeof viewModel,
+                openAR: typeof openAR,
+                galleryApp: typeof window.galleryApp
+            });
+        });
+    </script>
+</body>
+</html> 

@@ -314,7 +314,7 @@ class ModelGalleryApp {
     const qrContainer = document.getElementById(`qr-${model.id}`);
     if (!qrContainer) return;
     
-    const modelUrl = `${APP_CONFIG.baseUrl}/viewer.html?id=${model.id}`;
+    const modelUrl = `${APP_CONFIG.baseUrl}/ar-modelviewer.html?id=${model.id}`;
     
     try {
       // Clear container first
@@ -400,16 +400,16 @@ class ModelGalleryApp {
 
   // Model actions
   viewModel(id) {
-    window.open(`viewer.html?id=${id}`, '_blank');
+    window.open(`ar-modelviewer.html?id=${id}`, '_blank');
   }
 
   openAR(id) {
-    const modelUrl = `${APP_CONFIG.baseUrl}/viewer.html?id=${id}`;
+    const modelUrl = `${APP_CONFIG.baseUrl}/ar-modelviewer.html?id=${id}`;
     
     // For mobile devices, open directly
     if (/Mobi|Android/i.test(navigator.userAgent)) {
       window.open(modelUrl, '_blank');
-      this.showMessage('AR viewer opened! Use "View in AR" button for AR experience.', 'success');
+      this.showMessage('AR viewer opened! Tap "View in AR" for native AR experience.', 'success');
     } else {
       // For desktop, show QR code modal or copy link
       this.copyModelLink(id);
@@ -454,7 +454,7 @@ class ModelGalleryApp {
   }
 
   async copyModelLink(id) {
-    const modelUrl = `${APP_CONFIG.baseUrl}/viewer.html?id=${id}`;
+    const modelUrl = `${APP_CONFIG.baseUrl}/ar-modelviewer.html?id=${id}`;
     
     try {
       await navigator.clipboard.writeText(modelUrl);
@@ -467,7 +467,7 @@ class ModelGalleryApp {
 
   async shareModel(id) {
     const model = this.models.find(m => m.id === id);
-    const modelUrl = `${APP_CONFIG.baseUrl}/viewer.html?id=${id}`;
+    const modelUrl = `${APP_CONFIG.baseUrl}/ar-modelviewer.html?id=${id}`;
     
     if (navigator.share) {
       try {
