@@ -10,7 +10,7 @@ const SUPABASE_CONFIG = {
 const APP_CONFIG = {
   maxFileSize: 50 * 1024 * 1024, // 50MB max file size
   allowedFormats: ['.glb', '.gltf'],
-  baseUrl: window.location.origin,
+  baseUrl: 'https://dexterboi.github.io/3dAR', // 🔥 UPDATED FOR GITHUB PAGES
   qrCodeSize: 200
 };
 
