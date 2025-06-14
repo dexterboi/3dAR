@@ -130,27 +130,34 @@ class WebXRViewer {
   }
 
   async checkWebXRSupport() {
+    console.log('Checking WebXR support...');
+    
     if (!navigator.xr) {
-      console.warn('WebXR not supported');
+      console.warn('navigator.xr not available');
       return false;
     }
     
     try {
       const supported = await navigator.xr.isSessionSupported('immersive-ar');
+      console.log('WebXR AR support check result:', supported);
+      
       if (!supported) {
-        console.warn('WebXR AR not supported');
+        console.warn('WebXR AR not supported on this device');
         return false;
       }
+      
+      console.log('WebXR AR is supported!');
       
       // Show AR button if supported
       const startARBtn = document.getElementById('startARBtn');
       if (startARBtn) {
         startARBtn.style.display = 'block';
+        console.log('AR button shown');
       }
       
       return true;
     } catch (error) {
-      console.warn('WebXR support check failed:', error);
+      console.error('WebXR support check failed:', error);
       return false;
     }
   }
@@ -417,47 +424,70 @@ class WebXRViewer {
   }
 
   async onSessionStarted(session) {
-    console.log('WebXR session started');
+    console.log('WebXR session started successfully');
+    console.log('Session details:', {
+      mode: session.mode,
+      inputSources: session.inputSources.length,
+      visibilityState: session.visibilityState
+    });
+    
     this.xrSession = session;
     this.isARMode = true;
     this.isPreviewMode = false;
     this.stabilized = false; // Reset stabilization for AR
     
-    // Setup reference spaces
-    this.localReferenceSpace = await session.requestReferenceSpace('local');
-    this.viewerSpace = await session.requestReferenceSpace('viewer');
-    
-    // Setup hit testing
-    this.hitTestSource = await session.requestHitTestSource({ space: this.viewerSpace });
-    
-    // Add select event listener for placing models
-    session.addEventListener('select', this.onSelect.bind(this));
-    
-    // Remove preview model from scene
-    if (this.loadedModel) {
-      this.scene.remove(this.loadedModel);
+    try {
+      // Setup reference spaces
+      console.log('Setting up reference spaces...');
+      this.localReferenceSpace = await session.requestReferenceSpace('local');
+      console.log('Local reference space created');
+      
+      this.viewerSpace = await session.requestReferenceSpace('viewer');
+      console.log('Viewer reference space created');
+      
+      // Setup hit testing
+      console.log('Setting up hit testing...');
+      this.hitTestSource = await session.requestHitTestSource({ space: this.viewerSpace });
+      console.log('Hit test source created');
+      
+      // Add select event listener for placing models
+      session.addEventListener('select', this.onSelect.bind(this));
+      console.log('Select event listener added');
+      
+      // Remove preview model from scene
+      if (this.loadedModel) {
+        this.scene.remove(this.loadedModel);
+      }
+      // Also remove model group if it exists
+      if (this.modelGroup) {
+        this.scene.remove(this.modelGroup);
+      }
+      console.log('Preview models removed from scene');
+      
+      // Clear background for AR
+      this.scene.background = null;
+      
+      // Show stabilization message for AR (remove 'stabilized' class)
+      document.body.classList.remove('stabilized');
+      
+      // Disable orbit controls
+      if (this.controls) {
+        this.controls.enabled = false;
+      }
+      
+      // Update UI
+      this.updateARStatus('AR session active - Look around to find surfaces');
+      document.getElementById('startARBtn').style.display = 'none';
+      document.getElementById('exitARBtn').style.display = 'block';
+      document.getElementById('placeModelBtn').style.display = 'block';
+      
+      console.log('AR session setup complete');
+      
+    } catch (error) {
+      console.error('Error during AR session setup:', error);
+      this.updateARStatus('AR setup failed: ' + error.message);
+      await this.exitAR();
     }
-    // Also remove model group if it exists
-    if (this.modelGroup) {
-      this.scene.remove(this.modelGroup);
-    }
-    
-    // Clear background for AR
-    this.scene.background = null;
-    
-    // Show stabilization message for AR (remove 'stabilized' class)
-    document.body.classList.remove('stabilized');
-    
-    // Disable orbit controls
-    if (this.controls) {
-      this.controls.enabled = false;
-    }
-    
-    // Update UI
-    this.updateARStatus('AR session active - Look around to find surfaces');
-    document.getElementById('startARBtn').style.display = 'none';
-    document.getElementById('exitARBtn').style.display = 'block';
-    document.getElementById('placeModelBtn').style.display = 'block';
   }
 
   onFrame(time, frame) {
@@ -529,16 +559,25 @@ class WebXRViewer {
   async startAR() {
     try {
       this.updateARStatus('Starting AR session...');
+      console.log('Attempting to start AR session...');
       
       // Check if WebXR is available
       if (!navigator.xr) {
         throw new Error('WebXR not available on this device');
       }
       
-      // Request AR session with proper features for Samsung devices
+      // Check AR support specifically
+      const arSupported = await navigator.xr.isSessionSupported('immersive-ar');
+      if (!arSupported) {
+        throw new Error('AR not supported on this device');
+      }
+      
+      console.log('WebXR AR is supported, requesting session...');
+      
+      // Request AR session with minimal requirements for better compatibility
       const sessionInit = {
         requiredFeatures: ['local'],
-        optionalFeatures: ['hit-test', 'dom-overlay'],
+        optionalFeatures: ['hit-test', 'dom-overlay', 'anchors'],
       };
       
       // Add DOM overlay for better Samsung compatibility
@@ -550,22 +589,36 @@ class WebXRViewer {
       console.log('Requesting AR session with features:', sessionInit);
       
       const session = await navigator.xr.requestSession('immersive-ar', sessionInit);
+      console.log('AR session created successfully:', session);
       
+      // Set the session on the renderer
       await this.renderer.xr.setSession(session);
+      console.log('Renderer XR session set');
+      
+      // Start the session
       await this.onSessionStarted(session);
       
     } catch (error) {
       console.error('Failed to start AR session:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       
       let errorMessage = 'Failed to start AR. ';
       if (error.message.includes('not supported')) {
-        errorMessage += 'AR not supported on this device.';
-      } else if (error.message.includes('not allowed')) {
-        errorMessage += 'Camera permission required for AR.';
-      } else if (error.message.includes('NotFoundError')) {
-        errorMessage += 'No AR-capable camera found.';
+        errorMessage += 'AR not supported on this device. Try using Chrome on an ARCore-compatible Android device.';
+      } else if (error.message.includes('not allowed') || error.name === 'NotAllowedError') {
+        errorMessage += 'Camera permission required for AR. Please allow camera access and try again.';
+      } else if (error.message.includes('NotFoundError') || error.name === 'NotFoundError') {
+        errorMessage += 'No AR-capable camera found on this device.';
+      } else if (error.message.includes('SecurityError') || error.name === 'SecurityError') {
+        errorMessage += 'AR requires HTTPS or localhost. Please use a secure connection.';
+      } else if (error.message.includes('InvalidStateError') || error.name === 'InvalidStateError') {
+        errorMessage += 'AR session already active or device busy. Please try again.';
       } else {
-        errorMessage += 'Please ensure you\'re using Chrome on an ARCore-compatible device.';
+        errorMessage += `Error: ${error.message}. Please ensure you're using Chrome on an ARCore-compatible device.`;
       }
       
       this.updateARStatus(errorMessage);
