@@ -106,6 +106,17 @@
       <!-- QR Code Section -->
       <div id="qrSection" class="qr-section" style="display: none;">
         <h3><i class="fas fa-qrcode"></i> Scan for Mobile AR</h3>
+        
+        <!-- QR Type Selection -->
+        <div class="qr-type-selection">
+          <button id="directARBtn" class="qr-type-btn active">
+            <i class="fas fa-magic"></i> Direct AR Launch
+          </button>
+          <button id="webpageBtn" class="qr-type-btn">
+            <i class="fas fa-globe"></i> Webpage First
+          </button>
+        </div>
+        
         <div class="qr-container">
           <img id="qrImage" alt="QR Code for AR viewing" />
         </div>
@@ -148,14 +159,14 @@
         <div class="instructions-content">
           <h3><i class="fas fa-info-circle"></i> AR Instructions</h3>
           <ol>
-            <li><strong>Desktop:</strong> Scan the QR code with your mobile device</li>
-            <li><strong>Mobile:</strong> Tap "View in AR" button above</li>
-            <li><strong>Android:</strong> Uses Google Scene Viewer for best AR experience</li>
-            <li><strong>iOS:</strong> Uses AR Quick Look for native AR</li>
+            <li><strong>Desktop:</strong> Scan the QR code with your mobile device for direct AR launch</li>
+            <li><strong>Mobile:</strong> Tap "View in AR" button above for instant AR experience</li>
+            <li><strong>Android:</strong> QR code launches Google Scene Viewer directly in AR mode</li>
+            <li><strong>iOS:</strong> QR code opens AR Quick Look for native iOS AR experience</li>
           </ol>
           <p class="ar-note">
             <i class="fas fa-lightbulb"></i>
-            <strong>Tip:</strong> Scene Viewer provides the most reliable AR experience on Android devices
+            <strong>New:</strong> QR codes now launch AR directly - no need to open the webpage first!
           </p>
         </div>
       </div>

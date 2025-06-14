@@ -1087,4 +1087,75 @@ model-viewer:not([loaded]) .ar-button {
 model-viewer[loaded] .ar-button {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* QR Type Selection */
+.qr-type-selection {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.qr-type-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #4a5568;
+  border: 2px solid #e2e8f0;
+  padding: 10px 16px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.qr-type-btn:hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: #667eea;
+  color: #667eea;
+  transform: translateY(-2px);
+}
+
+.qr-type-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.qr-type-btn.active:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.qr-type-btn i {
+  font-size: 0.9rem;
+}
+
+/* Enhanced QR Section */
+.qr-section h3 {
+  text-align: center;
+  margin-bottom: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* Mobile Optimizations for QR Selection */
+@media (max-width: 768px) {
+  .qr-type-selection {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .qr-type-btn {
+    width: 100%;
+    max-width: 200px;
+    justify-content: center;
+  }
 } 

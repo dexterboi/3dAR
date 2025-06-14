@@ -191,13 +191,56 @@ class SceneViewerApp {
     }
   }
 
-  generateQRCode() {
-    const modelUrl = `${APP_CONFIG.baseUrl}/viewer.html?id=${this.modelId}`;
-    this.qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(modelUrl)}`;
+  generateQRCode(type = 'direct') {
+    // Create direct AR launch URL using Google Scene Viewer intent
+    let modelUrl;
+    if (this.currentModel.file_url) {
+      modelUrl = this.currentModel.file_url;
+    } else {
+      modelUrl = `${SUPABASE_CONFIG.url}/storage/v1/object/public/${this.currentModel.file_path}`;
+    }
+    
+    let qrTargetUrl;
+    
+    if (type === 'direct') {
+      // Google Scene Viewer intent URL for direct AR launch
+      const sceneViewerUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(modelUrl)}&mode=ar_only&title=${encodeURIComponent(this.currentModel.title)}#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${encodeURIComponent(`${APP_CONFIG.baseUrl}/viewer.html?id=${this.modelId}`)};end;`;
+      
+      // For iOS and non-Android devices, use model-viewer with AR
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      qrTargetUrl = isAndroid ? sceneViewerUrl : `${APP_CONFIG.baseUrl}/viewer.html?id=${this.modelId}&ar=true`;
+    } else {
+      // Regular webpage URL
+      qrTargetUrl = `${APP_CONFIG.baseUrl}/viewer.html?id=${this.modelId}`;
+    }
+    
+    console.log('QR Code Target URL:', qrTargetUrl);
+    
+    this.qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrTargetUrl)}`;
     
     const qrImage = document.getElementById('qrImage');
     if (qrImage) {
       qrImage.src = this.qrImageUrl;
+    }
+    
+    // Update QR instructions based on type
+    this.updateQRInstructions(type);
+  }
+
+  updateQRInstructions(type) {
+    const qrInstructions = document.querySelector('.qr-instructions');
+    if (qrInstructions) {
+      if (type === 'direct') {
+        qrInstructions.innerHTML = `
+          <i class="fas fa-magic"></i>
+          <strong>Direct AR Launch:</strong> Scan to open AR immediately on Android (Scene Viewer) or iOS (Quick Look)
+        `;
+      } else {
+        qrInstructions.innerHTML = `
+          <i class="fas fa-globe"></i>
+          <strong>Webpage First:</strong> Scan to open the model page, then tap "View in AR" button
+        `;
+      }
     }
   }
 
@@ -224,6 +267,13 @@ class SceneViewerApp {
     
     if (copyLinkBtn) copyLinkBtn.addEventListener('click', () => this.copyModelLink());
     if (downloadQRBtn) downloadQRBtn.addEventListener('click', () => this.downloadQR());
+    
+    // QR type selection
+    const directARBtn = document.getElementById('directARBtn');
+    const webpageBtn = document.getElementById('webpageBtn');
+    
+    if (directARBtn) directARBtn.addEventListener('click', () => this.setQRType('direct'));
+    if (webpageBtn) webpageBtn.addEventListener('click', () => this.setQRType('webpage'));
     
     // Model viewer events
     if (this.modelViewer) {
@@ -352,12 +402,36 @@ class SceneViewerApp {
     }
   }
 
+  setQRType(type) {
+    // Update button states
+    const directARBtn = document.getElementById('directARBtn');
+    const webpageBtn = document.getElementById('webpageBtn');
+    
+    if (directARBtn && webpageBtn) {
+      if (type === 'direct') {
+        directARBtn.classList.add('active');
+        webpageBtn.classList.remove('active');
+      } else {
+        directARBtn.classList.remove('active');
+        webpageBtn.classList.add('active');
+      }
+    }
+    
+    // Regenerate QR code based on type
+    if (this.currentModel) {
+      this.generateQRCode(type);
+    } else {
+      this.generateDemoQRCode(type);
+    }
+  }
+
   // Demo mode for testing
   showDemoMode() {
     const loadingScreen = document.getElementById('loadingScreen');
     const modelContainer = document.getElementById('modelContainer');
     const modelInfo = document.getElementById('modelInfo');
     const arInstructions = document.getElementById('arInstructions');
+    const qrSection = document.getElementById('qrSection');
     
     if (loadingScreen) loadingScreen.style.display = 'none';
     
@@ -390,10 +464,59 @@ class SceneViewerApp {
       arInstructions.style.display = 'block';
     }
     
+    // Generate QR code for demo
+    if (qrSection) {
+      qrSection.style.display = 'block';
+      this.generateDemoQRCode();
+    }
+    
     // Setup basic event listeners
     this.setupEventListeners();
     
     this.showMessage('Demo mode active - showing sample 3D model', 'info');
+  }
+
+  generateDemoQRCode(type = 'direct') {
+    const demoModelUrl = 'https://modelviewer.dev/shared-assets/models/Astronaut.glb';
+    
+    let qrTargetUrl;
+    
+    if (type === 'direct') {
+      // Google Scene Viewer intent URL for direct AR launch of demo model
+      const sceneViewerUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(demoModelUrl)}&mode=ar_only&title=${encodeURIComponent('Demo Astronaut')}#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${encodeURIComponent(`${APP_CONFIG.baseUrl}/viewer.html`)};end;`;
+      
+      // For iOS and non-Android devices, use the regular viewer URL with AR hint
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      qrTargetUrl = isAndroid ? sceneViewerUrl : `${APP_CONFIG.baseUrl}/viewer.html?ar=true`;
+    } else {
+      // Regular webpage URL
+      qrTargetUrl = `${APP_CONFIG.baseUrl}/viewer.html`;
+    }
+    
+    console.log('Demo QR Code Target URL:', qrTargetUrl);
+    
+    this.qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrTargetUrl)}`;
+    
+    const qrImage = document.getElementById('qrImage');
+    if (qrImage) {
+      qrImage.src = this.qrImageUrl;
+    }
+    
+    // Update QR instructions for demo
+    const qrInstructions = document.querySelector('.qr-instructions');
+    if (qrInstructions) {
+      if (type === 'direct') {
+        qrInstructions.innerHTML = `
+          <i class="fas fa-magic"></i>
+          <strong>Demo Direct AR:</strong> Scan to launch demo AR immediately on your mobile device
+        `;
+      } else {
+        qrInstructions.innerHTML = `
+          <i class="fas fa-globe"></i>
+          <strong>Demo Webpage:</strong> Scan to open demo page, then tap "View in AR" for AR experience
+        `;
+      }
+    }
   }
 
   // Utility methods
