@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Viewer AR - Actually Working!</title>
+    
+    <!-- Google Model Viewer -->
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: rgba(0,0,0,0.1);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        
+        .viewer-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+        }
+        
+        .model-info {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        
+        .model-info h2 {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .model-viewer-container {
+            flex: 1;
+            min-height: 500px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+        
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            min-height: 500px;
+            background-color: transparent;
+        }
+        
+        .ar-instructions {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .ar-instructions h3 {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .ar-instructions ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .ar-instructions li {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .ar-instructions li::before {
+            content: "✅";
+            font-size: 16px;
+        }
+        
+        .model-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .control-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        
+        .control-btn.primary {
+            background: #ff6b6b;
+            font-weight: 600;
+        }
+        
+        .control-btn.primary:hover {
+            background: #ff5252;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            border-radius: 15px;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status-message {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .viewer-container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.2rem;
+            }
+            
+            .model-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .control-btn {
+                width: 100%;
+                max-width: 200px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Status Message -->
+    <div id="statusMessage" class="status-message"></div>
+    
+    <!-- Header -->
+    <div class="header">
+        <h1>
+            <span>📱</span>
+            <span id="modelTitle">3D Model AR Viewer</span>
+        </h1>
+        <a href="gallery.html" class="back-btn">
+            <span>←</span>
+            <span>Back to Gallery</span>
+        </a>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="viewer-container">
+        <!-- Model Info -->
+        <div class="model-info">
+            <h2>
+                <span>🚀</span>
+                <span>Google Model Viewer AR</span>
+            </h2>
+            <p id="modelDescription">Interactive 3D model with native AR support for Android & iOS</p>
+        </div>
+        
+        <!-- Model Viewer -->
+        <div class="model-viewer-container">
+            <!-- Loading Overlay -->
+            <div id="loadingOverlay" class="loading-overlay">
+                <div class="loading-spinner"></div>
+                <h3>Loading 3D Model...</h3>
+                <p>Please wait while we prepare your AR experience</p>
+            </div>
+            
+            <!-- Google Model Viewer -->
+            <model-viewer
+                id="modelViewer"
+                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf"
+                alt="3D Model for AR viewing"
+                ar
+                ar-modes="scene-viewer webxr quick-look"
+                camera-controls
+                auto-rotate
+                auto-rotate-delay="3000"
+                rotation-per-second="30deg"
+                environment-image="neutral"
+                shadow-intensity="1"
+                exposure="1"
+                tone-mapping="neutral"
+                loading="eager">
+                
+                <!-- AR Button (Custom) -->
+                <button 
+                    slot="ar-button" 
+                    id="ar-button"
+                    class="control-btn primary"
+                    style="position: absolute; bottom: 20px; right: 20px;">
+                    📱 View in AR
+                </button>
+                
+                <!-- Loading Progress -->
+                <div slot="progress-bar" style="display: none;"></div>
+            </model-viewer>
+        </div>
+        
+        <!-- Controls -->
+        <div class="model-controls">
+            <button class="control-btn" onclick="switchModel()">
+                <span>🔄</span>
+                <span>Switch Model</span>
+            </button>
+            <button class="control-btn" onclick="resetCamera()">
+                <span>🎯</span>
+                <span>Reset View</span>
+            </button>
+            <button class="control-btn" onclick="toggleAutoRotate()">
+                <span>🔄</span>
+                <span id="rotateText">Stop Rotation</span>
+            </button>
+            <button class="control-btn" onclick="shareModel()">
+                <span>📤</span>
+                <span>Share</span>
+            </button>
+        </div>
+        
+        <!-- AR Instructions -->
+        <div class="ar-instructions">
+            <h3>
+                <span>📋</span>
+                <span>How to Use AR</span>
+            </h3>
+            <ul>
+                <li><strong>Android:</strong> Tap "View in AR" → Opens Google Scene Viewer</li>
+                <li><strong>iPhone/iPad:</strong> Tap "View in AR" → Opens AR Quick Look</li>
+                <li><strong>Desktop:</strong> Use mouse to rotate, scroll to zoom</li>
+                <li><strong>AR Placement:</strong> Point at flat surfaces, tap to place model</li>
+                <li><strong>No Markers Needed:</strong> Uses device's built-in AR capabilities</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Available 3D models
+        const models = [
+            {
+                name: "Damaged Helmet",
+                src: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf",
+                description: "Sci-fi damaged helmet with realistic textures"
+            },
+            {
+                name: "Duck",
+                src: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF/Duck.gltf",
+                description: "Classic rubber duck 3D model"
+            },
+            {
+                name: "Avocado",
+                src: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Avocado/glTF/Avocado.gltf",
+                description: "Realistic avocado with detailed textures"
+            },
+            {
+                name: "Boom Box",
+                src: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoomBox/glTF/BoomBox.gltf",
+                description: "Retro boom box radio"
+            }
+        ];
+        
+        let currentModelIndex = 0;
+        let isAutoRotating = true;
+        
+        // Get model viewer element
+        const modelViewer = document.getElementById('modelViewer');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Model Viewer AR initialized');
+            
+            // Load model from URL parameter if provided
+            const urlParams = new URLSearchParams(window.location.search);
+            const modelId = urlParams.get('id');
+            
+            if (modelId) {
+                loadModelFromDatabase(modelId);
+            } else {
+                // Use default model
+                updateModelInfo(models[currentModelIndex]);
+            }
+            
+            // Setup event listeners
+            setupEventListeners();
+        });
+        
+        function setupEventListeners() {
+            // Model loading events
+            modelViewer.addEventListener('load', function() {
+                console.log('✅ Model loaded successfully');
+                hideLoading();
+                showStatus('Model loaded! Tap "View in AR" for AR experience', 'success');
+            });
+            
+            modelViewer.addEventListener('error', function(event) {
+                console.error('❌ Model loading error:', event);
+                hideLoading();
+                showStatus('Failed to load 3D model', 'error');
+            });
+            
+            // AR events
+            modelViewer.addEventListener('ar-status', function(event) {
+                console.log('AR Status:', event.detail.status);
+                if (event.detail.status === 'session-started') {
+                    showStatus('AR session started! 🎉', 'success');
+                } else if (event.detail.status === 'not-presenting') {
+                    showStatus('AR session ended', 'info');
+                }
+            });
+            
+            // Progress events
+            modelViewer.addEventListener('progress', function(event) {
+                const progress = event.detail.totalProgress;
+                console.log(`Loading progress: ${Math.round(progress * 100)}%`);
+            });
+        }
+        
+        async function loadModelFromDatabase(modelId) {
+            try {
+                showLoading('Loading model from database...');
+                
+                // Wait for database to be available
+                await waitForDatabase();
+                
+                // Initialize database
+                const initialized = await window.modelDB.init();
+                if (!initialized) {
+                    throw new Error('Database connection failed');
+                }
+                
+                // Get model data
+                const model = await window.modelDB.getModel(modelId);
+                if (!model) {
+                    throw new Error('Model not found');
+                }
+                
+                // Update model viewer
+                modelViewer.src = model.file_url;
+                document.getElementById('modelTitle').textContent = model.title;
+                document.getElementById('modelDescription').textContent = model.description || 'Interactive 3D model with AR support';
+                
+                console.log('✅ Model loaded from database:', model.title);
+                
+            } catch (error) {
+                console.error('❌ Database loading error:', error);
+                showStatus('Failed to load model from database - using default', 'error');
+                updateModelInfo(models[currentModelIndex]);
+            }
+        }
+        
+        async function waitForDatabase() {
+            let attempts = 0;
+            while (!window.modelDB && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+        }
+        
+        function switchModel() {
+            currentModelIndex = (currentModelIndex + 1) % models.length;
+            const model = models[currentModelIndex];
+            
+            showLoading(`Loading ${model.name}...`);
+            modelViewer.src = model.src;
+            updateModelInfo(model);
+            
+            showStatus(`Switched to ${model.name}`, 'info');
+        }
+        
+        function updateModelInfo(model) {
+            document.getElementById('modelTitle').textContent = model.name;
+            document.getElementById('modelDescription').textContent = model.description;
+        }
+        
+        function resetCamera() {
+            modelViewer.resetTurntableRotation();
+            modelViewer.jumpCameraToGoal();
+            showStatus('Camera view reset', 'info');
+        }
+        
+        function toggleAutoRotate() {
+            isAutoRotating = !isAutoRotating;
+            modelViewer.autoRotate = isAutoRotating;
+            
+            const rotateText = document.getElementById('rotateText');
+            rotateText.textContent = isAutoRotating ? 'Stop Rotation' : 'Start Rotation';
+            
+            showStatus(isAutoRotating ? 'Auto-rotation enabled' : 'Auto-rotation disabled', 'info');
+        }
+        
+        function shareModel() {
+            const url = window.location.href;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: document.getElementById('modelTitle').textContent,
+                    text: 'Check out this 3D model in AR!',
+                    url: url
+                });
+            } else {
+                // Fallback: copy to clipboard
+                navigator.clipboard.writeText(url).then(() => {
+                    showStatus('Link copied to clipboard!', 'success');
+                }).catch(() => {
+                    showStatus('Unable to copy link', 'error');
+                });
+            }
+        }
+        
+        function showLoading(message = 'Loading...') {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.querySelector('h3').textContent = message;
+            overlay.style.display = 'flex';
+        }
+        
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.style.display = 'none';
+        }
+        
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.style.display = 'block';
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Debug info
+        console.log('🔧 Google Model Viewer AR loaded');
+        console.log('📱 This uses native AR on Android (Scene Viewer) and iOS (AR Quick Look)');
+        console.log('✅ No markers needed - uses surface detection');
+        console.log('🚀 Works on both HTTP and HTTPS');
+    </script>
+    
+    <!-- Load database if available -->
+    <script src="config.js"></script>
+    <script src="database.js"></script>
+</body>
+</html> 

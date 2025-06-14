@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple AR Viewer - Working Camera & 3D Models</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        .ar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 999;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .ar-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .ar-btn {
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .ar-btn:hover {
+            background: rgba(0,0,0,0.9);
+        }
+        
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .error {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background: rgba(255,0,0,0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 300px;
+        }
+        
+        /* Hide A-Frame loading screen */
+        .a-loader-title {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading">
+        <h3>🚀 Starting AR Camera...</h3>
+        <p>Please allow camera access when prompted</p>
+        <div style="margin-top: 10px;">
+            <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid #fff; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        </div>
+    </div>
+    
+    <!-- Error Screen -->
+    <div id="errorScreen" class="error" style="display: none;">
+        <h3>❌ Camera Access Denied</h3>
+        <p>Please refresh and allow camera access for AR to work</p>
+        <button onclick="location.reload()" class="ar-btn">🔄 Retry</button>
+    </div>
+    
+    <!-- AR Status -->
+    <div id="arStatus" class="ar-overlay">
+        📱 Point camera at the marker below or scan QR code
+    </div>
+    
+    <!-- AR Controls -->
+    <div class="ar-controls">
+        <button id="backBtn" class="ar-btn" onclick="goBack()">← Back</button>
+        <button id="switchModelBtn" class="ar-btn" onclick="switchModel()">🔄 Switch Model</button>
+        <button id="helpBtn" class="ar-btn" onclick="showHelp()">❓ Help</button>
+    </div>
+    
+    <!-- A-Frame AR Scene -->
+    <a-scene
+        id="arScene"
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+        vr-mode-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: true; colorManagement: true; sortObjects: true;"
+        loading-screen="enabled: false"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;">
+        
+        <!-- Assets -->
+        <a-assets>
+            <!-- Default 3D Models -->
+            <a-asset-item id="duck" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF/Duck.gltf"></a-asset-item>
+            <a-asset-item id="helmet" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf"></a-asset-item>
+        </a-assets>
+        
+        <!-- Lighting -->
+        <a-light type="ambient" color="#404040" intensity="0.8"></a-light>
+        <a-light type="directional" position="1 1 1" color="#ffffff" intensity="0.6"></a-light>
+        
+        <!-- AR Marker -->
+        <a-marker
+            id="mainMarker"
+            preset="hiro"
+            raycaster="objects: .clickable"
+            emitevents="true"
+            cursor="fuse: false; rayOrigin: mouse;">
+            
+            <!-- 3D Model Container -->
+            <a-entity
+                id="modelContainer"
+                position="0 0.5 0"
+                scale="0.5 0.5 0.5"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear;">
+                
+                <!-- Default Duck Model -->
+                <a-gltf-model
+                    id="currentModel"
+                    src="#duck"
+                    position="0 0 0"
+                    scale="1 1 1"
+                    class="clickable">
+                </a-gltf-model>
+                
+            </a-entity>
+            
+            <!-- Ground Plane -->
+            <a-plane
+                position="0 0 0"
+                rotation="-90 0 0"
+                width="2"
+                height="2"
+                color="#7BC8A4"
+                opacity="0.3"
+                material="transparent: true">
+            </a-plane>
+            
+        </a-marker>
+        
+        <!-- Camera -->
+        <a-entity camera></a-entity>
+    </a-scene>
+    
+    <!-- Marker Image (for testing) -->
+    <div id="markerHelp" style="position: fixed; bottom: 80px; right: 20px; z-index: 999; background: white; padding: 10px; border-radius: 10px; display: none;">
+        <h4 style="margin: 0 0 10px 0;">📋 AR Marker</h4>
+        <img src="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png" 
+             style="width: 100px; height: 100px; border: 1px solid #ccc;">
+        <p style="margin: 5px 0 0 0; font-size: 12px;">Print or display this marker</p>
+    </div>
+
+    <script>
+        let currentModelIndex = 0;
+        const models = [
+            { id: 'duck', name: 'Duck', src: '#duck' },
+            { id: 'helmet', name: 'Helmet', src: '#helmet' }
+        ];
+        
+        // Initialize AR
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Initializing AR...');
+            
+            // Hide loading screen after a delay
+            setTimeout(() => {
+                const loading = document.getElementById('loadingScreen');
+                if (loading) {
+                    loading.style.display = 'none';
+                }
+                console.log('✅ AR Camera should be active now');
+                updateStatus('📱 Point camera at marker to see 3D model');
+            }, 3000);
+            
+            // Check for camera permissions
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    console.log('✅ Camera access granted');
+                    stream.getTracks().forEach(track => track.stop());
+                })
+                .catch(err => {
+                    console.error('❌ Camera access denied:', err);
+                    showError();
+                });
+            
+            // Listen for marker events
+            const marker = document.getElementById('mainMarker');
+            if (marker) {
+                marker.addEventListener('markerFound', function() {
+                    console.log('🎯 Marker detected!');
+                    updateStatus('🎯 Marker found! 3D model should be visible');
+                });
+                
+                marker.addEventListener('markerLost', function() {
+                    console.log('👻 Marker lost');
+                    updateStatus('👻 Marker lost - point camera at marker');
+                });
+            }
+        });
+        
+        function updateStatus(message) {
+            const status = document.getElementById('arStatus');
+            if (status) {
+                status.innerHTML = message;
+            }
+        }
+        
+        function showError() {
+            const loading = document.getElementById('loadingScreen');
+            const error = document.getElementById('errorScreen');
+            if (loading) loading.style.display = 'none';
+            if (error) error.style.display = 'block';
+        }
+        
+        function switchModel() {
+            currentModelIndex = (currentModelIndex + 1) % models.length;
+            const model = models[currentModelIndex];
+            const currentModel = document.getElementById('currentModel');
+            
+            if (currentModel) {
+                currentModel.setAttribute('src', model.src);
+                updateStatus(`🔄 Switched to ${model.name} model`);
+                console.log(`Switched to model: ${model.name}`);
+            }
+        }
+        
+        function showHelp() {
+            const help = document.getElementById('markerHelp');
+            if (help) {
+                help.style.display = help.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+        
+        function goBack() {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = 'gallery.html';
+            }
+        }
+        
+        // Add CSS animation for loading spinner
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Debug info
+        console.log('🔧 AR.js Simple Viewer Loaded');
+        console.log('📱 This should work on any device with camera');
+        console.log('🎯 Point camera at Hiro marker to see 3D models');
+    </script>
+</body>
+</html> 

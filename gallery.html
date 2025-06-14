@@ -8,6 +8,47 @@
     <link type="text/css" href="./styles.css" rel="stylesheet"/>
     <link type="text/css" href="./gallery-styles.css" rel="stylesheet"/>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+      .ar-test-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        text-align: center;
+      }
+      
+      .ar-test-btn {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        padding: 15px 30px;
+        border-radius: 25px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin: 10px;
+        text-decoration: none;
+        display: inline-block;
+      }
+      
+      .ar-test-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      }
+      
+      .ar-test-btn.primary {
+        background: #ff6b6b;
+        border-color: #ff6b6b;
+      }
+      
+      .ar-test-btn.primary:hover {
+        background: #ff5252;
+        border-color: #ff5252;
+      }
+    </style>
   </head>
   <body>
     <div class="container">
@@ -15,6 +56,34 @@
         <h1><i class="fas fa-cubes"></i> 3D Model Gallery & AR</h1>
         <p>Upload, view, and share your 3D models with AR functionality</p>
       </header>
+
+      <!-- AR Test Section -->
+      <div class="ar-test-section">
+        <h2><i class="fas fa-camera"></i> 🚀 Test AR Viewers - Choose Your Experience!</h2>
+        <p>We have multiple AR solutions - try them all to see which works best on your device!</p>
+        <div>
+          <a href="ar-modelviewer.html" class="ar-test-btn primary">
+            <i class="fas fa-mobile-alt"></i> 📱 Google Model Viewer (BEST)
+          </a>
+          <a href="ar-simple.html" class="ar-test-btn">
+            <i class="fas fa-video"></i> 🎯 AR.js with Markers
+          </a>
+          <a href="viewer.html?id=test" class="ar-test-btn">
+            <i class="fas fa-eye"></i> 🔧 WebXR (Broken)
+          </a>
+        </div>
+        <div style="margin-top: 15px;">
+          <p style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">
+            <strong>🥇 Google Model Viewer:</strong> ✅ Works on HTTP/HTTPS • ✅ Native Android/iOS AR • ✅ No markers needed
+          </p>
+          <p style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">
+            <strong>🥈 AR.js:</strong> ✅ Works everywhere • ✅ Camera opens • ❌ Requires printed markers
+          </p>
+          <p style="font-size: 14px; opacity: 0.9;">
+            <strong>🥉 WebXR:</strong> ❌ HTTPS required • ❌ Limited device support • ❌ Complex setup
+          </p>
+        </div>
+      </div>
 
       <!-- Upload Section -->
       <div class="upload-section">
