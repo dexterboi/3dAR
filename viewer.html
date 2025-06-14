@@ -3,7 +3,7 @@
   <head>
     <title>3D Model Viewer & AR</title>
     <meta charset="utf-8">
-    <meta name="description" content="3D Model Viewer with AR QR Code">
+    <meta name="description" content="3D Model Viewer with AR using Google Scene Viewer">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link type="text/css" href="./styles.css" rel="stylesheet"/>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -46,12 +46,13 @@
         </div>
       </div>
 
-      <!-- Model Viewer -->
+      <!-- Model Viewer Container -->
       <div id="modelContainer" class="model-container" style="display: none;">
+        <!-- Google Scene Viewer Compatible Model Viewer -->
         <model-viewer 
           id="modelViewer"
           ar
-          ar-modes="webxr scene-viewer quick-look"
+          ar-modes="scene-viewer webxr quick-look"
           ar-scale="auto"
           camera-controls 
           touch-action="pan-y"
@@ -61,25 +62,31 @@
           shadow-intensity="1"
           environment-image="neutral"
           exposure="1"
-          shadow-softness="0.25">
+          shadow-softness="0.25"
+          loading="eager"
+          reveal="auto">
           
+          <!-- Progress Bar -->
           <div class="progress-bar" id="progress-bar" slot="progress-bar">
             <div class="update-bar"></div>
           </div>
           
+          <!-- AR Button -->
           <button slot="ar-button" id="ar-button" class="ar-button">
             <i class="fas fa-cube"></i>
             View in AR
           </button>
+
+          <!-- Poster/Loading Image -->
+          <div slot="poster" class="model-poster">
+            <div class="poster-content">
+              <i class="fas fa-cube"></i>
+              <p>Loading 3D Model...</p>
+            </div>
+          </div>
         </model-viewer>
 
-        <!-- WebXR AR Button -->
-        <button id="webxr-ar-button" class="webxr-ar-button" style="display: none;">
-          <i class="fas fa-magic"></i>
-          Enhanced AR (WebXR)
-        </button>
-
-        <!-- Controls -->
+        <!-- Model Controls -->
         <div class="controls">
           <button id="rotateBtn" class="control-btn">
             <i class="fas fa-sync-alt"></i>
@@ -104,7 +111,7 @@
         </div>
         <p class="qr-instructions">
           <i class="fas fa-mobile-alt"></i>
-          Scan this QR code with your mobile device to view the model in AR
+          Scan this QR code with your mobile device to view the model in AR using Google Scene Viewer
         </p>
         <div class="qr-actions">
           <button id="copyLinkBtn" class="qr-btn">
@@ -119,7 +126,7 @@
       <!-- Model Info -->
       <div id="modelInfo" class="model-info" style="display: none;">
         <h2 id="modelTitle">3D Model</h2>
-        <p id="modelDescription">Interactive 3D model with AR support</p>
+        <p id="modelDescription">Interactive 3D model with AR support via Google Scene Viewer</p>
         <div class="model-stats">
           <div class="stat">
             <i class="fas fa-file-alt"></i>
@@ -129,27 +136,27 @@
             <i class="fas fa-calendar"></i>
             <span id="modelDate">Loading...</span>
           </div>
+          <div class="stat">
+            <i class="fas fa-mobile-alt"></i>
+            <span>Scene Viewer AR</span>
+          </div>
         </div>
       </div>
 
-      <!-- WebXR AR Canvas (Hidden by default) -->
-      <canvas id="webxr-canvas" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;"></canvas>
-      
-      <!-- WebXR AR UI -->
-      <div id="webxr-ui" style="display: none; position: fixed; top: 20px; left: 20px; right: 20px; z-index: 10000;">
-        <div class="webxr-controls">
-          <button id="webxr-place-btn" class="webxr-btn">
-            <i class="fas fa-hand-pointer"></i> Tap to Place
-          </button>
-          <button id="webxr-reset-btn" class="webxr-btn">
-            <i class="fas fa-redo"></i> Reset
-          </button>
-          <button id="webxr-exit-btn" class="webxr-btn webxr-exit">
-            <i class="fas fa-times"></i> Exit AR
-          </button>
-        </div>
-        <div class="webxr-instructions">
-          <p><i class="fas fa-info-circle"></i> Move your device to find surfaces, then tap to place the model</p>
+      <!-- AR Instructions -->
+      <div id="arInstructions" class="ar-instructions" style="display: none;">
+        <div class="instructions-content">
+          <h3><i class="fas fa-info-circle"></i> AR Instructions</h3>
+          <ol>
+            <li><strong>Desktop:</strong> Scan the QR code with your mobile device</li>
+            <li><strong>Mobile:</strong> Tap "View in AR" button above</li>
+            <li><strong>Android:</strong> Uses Google Scene Viewer for best AR experience</li>
+            <li><strong>iOS:</strong> Uses AR Quick Look for native AR</li>
+          </ol>
+          <p class="ar-note">
+            <i class="fas fa-lightbulb"></i>
+            <strong>Tip:</strong> Scene Viewer provides the most reliable AR experience on Android devices
+          </p>
         </div>
       </div>
     </div>
@@ -164,10 +171,8 @@
       }
     </script>
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
-    <script src="https://unpkg.com/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="config.js"></script>
     <script src="database.js"></script>
-    <script src="viewer.js"></script>
+    <script src="scene-viewer.js"></script>
   </body>
 </html> 
