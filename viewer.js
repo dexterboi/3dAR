@@ -1,5 +1,5 @@
-// Model Viewer App
-class ModelViewerApp {
+// WebXR AR Model Viewer with Hit Test
+class WebXRModelViewer {
   constructor() {
     this.currentModel = null;
     this.modelId = null;
@@ -7,11 +7,23 @@ class ModelViewerApp {
     this.isFullscreen = false;
     this.qrImageUrl = null;
     
+    // WebXR properties
+    this.xrSession = null;
+    this.xrRefSpace = null;
+    this.xrHitTestSource = null;
+    this.xrRenderer = null;
+    this.xrScene = null;
+    this.xrCamera = null;
+    this.xrReticle = null;
+    this.xrModel = null;
+    this.xrCanvas = null;
+    this.placedModels = [];
+    
     this.init();
   }
 
   async init() {
-    console.log('Initializing Model Viewer...');
+    console.log('Initializing WebXR Model Viewer...');
     
     // Get model ID from URL parameters
     this.modelId = this.getUrlParameter('id');
@@ -21,7 +33,7 @@ class ModelViewerApp {
       return;
     }
     
-    // Initialize database immediately
+    // Initialize database
     try {
       const initialized = await modelDB.init();
       if (!initialized) {
@@ -34,110 +46,21 @@ class ModelViewerApp {
       return;
     }
     
+    // Load model data
+    await this.loadModelData();
+    
     // Setup event listeners
     this.setupEventListeners();
     
-    // Load the model immediately
-    await this.loadModel();
-    
-    console.log('Model viewer initialized successfully');
+    // Check WebXR support
+    this.checkWebXRSupport();
   }
 
-  getUrlParameter(name) {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get(name);
-  }
-
-  setupEventListeners() {
-    // Model viewer progress
-    document.addEventListener('DOMContentLoaded', () => {
-      const modelViewer = document.querySelector('model-viewer');
-      if (modelViewer) {
-        modelViewer.addEventListener('progress', this.onProgress);
-        modelViewer.addEventListener('load', this.onModelLoad.bind(this));
-        modelViewer.addEventListener('error', this.onModelError.bind(this));
-        
-        // AR status events
-        modelViewer.addEventListener('ar-status', (event) => {
-          console.log('AR Status:', event.detail.status);
-          if (event.detail.status === 'session-started') {
-            this.showMessage('AR session started! Place your model by tapping.', 'success');
-          } else if (event.detail.status === 'not-presenting') {
-            console.log('AR session ended');
-          } else if (event.detail.status === 'failed') {
-            this.showMessage('AR failed to start. Try again or use a different device.', 'error');
-          }
-        });
-      }
-    });
-
-    // Control buttons
-    const resetBtn = document.getElementById('resetView');
-    const toggleRotationBtn = document.getElementById('toggleRotation');
-    const screenshotBtn = document.getElementById('takeScreenshot');
-    const shareBtn = document.getElementById('shareBtn');
-    const fullscreenBtn = document.getElementById('fullscreenBtn');
-    const closeFullscreenBtn = document.getElementById('closeFullscreen');
-    const downloadQRBtn = document.getElementById('downloadQR');
-    const copyUrlBtn = document.getElementById('copyUrl');
-
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => this.resetView());
-    }
-    
-    if (toggleRotationBtn) {
-      toggleRotationBtn.addEventListener('click', () => this.toggleRotation());
-    }
-    
-    if (screenshotBtn) {
-      screenshotBtn.addEventListener('click', () => this.takeScreenshot());
-    }
-    
-    if (shareBtn) {
-      shareBtn.addEventListener('click', () => this.shareModel());
-    }
-    
-    if (fullscreenBtn) {
-      fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
-    }
-    
-    if (closeFullscreenBtn) {
-      closeFullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
-    }
-    
-    if (downloadQRBtn) {
-      downloadQRBtn.addEventListener('click', () => this.downloadQR());
-    }
-    
-    if (copyUrlBtn) {
-      copyUrlBtn.addEventListener('click', () => this.copyUrl());
-    }
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && this.isFullscreen) {
-        this.toggleFullscreen();
-      }
-      if (event.key === 'f' || event.key === 'F') {
-        this.toggleFullscreen();
-      }
-      if (event.key === ' ') {
-        event.preventDefault();
-        this.toggleRotation();
-      }
-      if (event.key === 'r' || event.key === 'R') {
-        this.resetView();
-      }
-    });
-  }
-
-  async loadModel() {
+  async loadModelData() {
     try {
-      this.showLoading();
+      this.updateLoadingText('Loading model data...');
       
-      // Fetch model from database
-      const model = await modelDB.getModelById(this.modelId);
-      
+      const model = await modelDB.getModel(this.modelId);
       if (!model) {
         this.showError('Model not found');
         return;
@@ -145,218 +68,351 @@ class ModelViewerApp {
       
       this.currentModel = model;
       
-      // Update page title
-      document.title = `${model.title} - 3D Model Viewer`;
-      
-      // Load model into viewer
-      await this.setupModelViewer(model);
-      
-      // Update UI with model information
+      // Update UI with model data
       this.updateModelInfo(model);
+      
+      // Load the 3D model
+      await this.loadModel(model);
       
       // Generate QR code
       this.generateQRCode();
       
       // Show main content
-      this.showContent();
+      this.showMainContent();
       
     } catch (error) {
-      console.error('Failed to load model:', error);
-      this.showError('Failed to load model: ' + error.message);
+      console.error('Error loading model:', error);
+      this.showError('Failed to load model data');
     }
   }
 
-  async setupModelViewer(model) {
-    const modelViewer = document.querySelector('model-viewer');
-    
-    if (!modelViewer) {
-      throw new Error('Model viewer element not found');
+  async loadModel(model) {
+    try {
+      this.updateLoadingText('Loading 3D model...');
+      
+      const modelViewer = document.getElementById('modelViewer');
+      const modelUrl = `${APP_CONFIG.supabaseUrl}/storage/v1/object/public/models/${model.file_path}`;
+      
+      modelViewer.src = modelUrl;
+      
+      // Wait for model to load
+      await new Promise((resolve, reject) => {
+        modelViewer.addEventListener('load', resolve);
+        modelViewer.addEventListener('error', reject);
+      });
+      
+      console.log('Model loaded successfully');
+      
+    } catch (error) {
+      console.error('Error loading 3D model:', error);
+      throw error;
     }
-    
-    // Set model source
-    modelViewer.src = model.file_url;
-    
-    // Configure AR settings for better compatibility
-    modelViewer.setAttribute('ar', '');
-    modelViewer.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
-    modelViewer.setAttribute('ar-scale', 'auto');
-    
-    // Update page meta for social sharing
-    this.updateMetaTags(model);
-    
-    console.log('Model viewer configured with AR support');
   }
 
   updateModelInfo(model) {
-    // Update title and description
-    const titleElement = document.getElementById('modelTitle');
-    const descriptionElement = document.getElementById('modelDescription');
-    const sizeElement = document.getElementById('modelSize');
-    const dateElement = document.getElementById('modelDate');
-    const fileSizeElement = document.getElementById('fileSize');
-    const tagsElement = document.getElementById('modelTags');
+    document.getElementById('modelTitle').textContent = model.title;
+    document.getElementById('modelDescription').textContent = model.description || 'Interactive 3D model with AR support';
     
-    if (titleElement) {
-      titleElement.textContent = model.title;
-    }
+    // Update model stats
+    const sizeInMB = (model.file_size / (1024 * 1024)).toFixed(1);
+    document.getElementById('modelSize').textContent = `${sizeInMB} MB`;
     
-    if (descriptionElement) {
-      descriptionElement.textContent = model.description || 'No description available';
-    }
-    
-    if (sizeElement) {
-      sizeElement.textContent = this.formatFileSize(model.file_size);
-    }
-    
-    if (dateElement) {
-      dateElement.textContent = this.formatDate(model.upload_date);
-    }
-    
-    if (fileSizeElement) {
-      fileSizeElement.textContent = this.formatFileSize(model.file_size);
-    }
-    
-    if (tagsElement && model.tags) {
-      tagsElement.innerHTML = this.formatTags(model.tags);
-    }
-  }
-
-  updateMetaTags(model) {
-    // Update page meta tags for better social sharing
-    document.querySelector('meta[name="description"]').content = 
-      `View ${model.title} in 3D and AR. ${model.description || ''}`;
-    
-    // Add Open Graph meta tags
-    this.addMetaTag('og:title', model.title);
-    this.addMetaTag('og:description', model.description || 'View this 3D model in AR');
-    this.addMetaTag('og:url', window.location.href);
-    this.addMetaTag('og:type', 'website');
-  }
-
-  addMetaTag(property, content) {
-    let metaTag = document.querySelector(`meta[property="${property}"]`);
-    if (!metaTag) {
-      metaTag = document.createElement('meta');
-      metaTag.setAttribute('property', property);
-      document.head.appendChild(metaTag);
-    }
-    metaTag.setAttribute('content', content);
+    const uploadDate = new Date(model.created_at).toLocaleDateString();
+    document.getElementById('modelDate').textContent = uploadDate;
   }
 
   generateQRCode() {
-    const qrContainer = document.getElementById('qrcode');
-    const currentURL = window.location.href;
+    const modelUrl = `${APP_CONFIG.baseUrl}/viewer.html?id=${this.modelId}`;
+    this.qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(modelUrl)}`;
     
-    if (!qrContainer) return;
+    const qrImage = document.getElementById('qrImage');
+    qrImage.src = this.qrImageUrl;
+  }
+
+  setupEventListeners() {
+    // Control buttons
+    document.getElementById('rotateBtn').addEventListener('click', () => this.toggleRotation());
+    document.getElementById('resetBtn').addEventListener('click', () => this.resetView());
+    document.getElementById('screenshotBtn').addEventListener('click', () => this.takeScreenshot());
     
+    // Navigation
+    document.getElementById('shareBtn').addEventListener('click', () => this.shareModel());
+    document.getElementById('fullscreenBtn').addEventListener('click', () => this.toggleFullscreen());
+    
+    // QR actions
+    document.getElementById('copyLinkBtn').addEventListener('click', () => this.copyModelLink());
+    document.getElementById('downloadQRBtn').addEventListener('click', () => this.downloadQR());
+    
+    // WebXR AR button
+    document.getElementById('webxr-ar-button').addEventListener('click', () => this.startWebXRAR());
+    
+    // WebXR UI controls
+    document.getElementById('webxr-place-btn').addEventListener('click', () => this.placeModel());
+    document.getElementById('webxr-reset-btn').addEventListener('click', () => this.resetAR());
+    document.getElementById('webxr-exit-btn').addEventListener('click', () => this.exitWebXRAR());
+    
+    // Model viewer events
+    const modelViewer = document.getElementById('modelViewer');
+    modelViewer.addEventListener('ar-status', (event) => {
+      console.log('AR Status:', event.detail.status);
+    });
+  }
+
+  async checkWebXRSupport() {
+    if ('xr' in navigator) {
+      try {
+        const supported = await navigator.xr.isSessionSupported('immersive-ar');
+        if (supported) {
+          document.getElementById('webxr-ar-button').style.display = 'block';
+          console.log('WebXR AR supported');
+        } else {
+          console.log('WebXR AR not supported');
+        }
+      } catch (error) {
+        console.log('WebXR not available:', error);
+      }
+    }
+  }
+
+  async startWebXRAR() {
     try {
-      // Use QR Server API - free and reliable
-      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(currentURL)}`;
+      console.log('Starting WebXR AR session...');
       
-      // Store QR URL for download functionality
-      this.qrImageUrl = qrApiUrl;
+      // Request XR session with hit-test feature
+      this.xrSession = await navigator.xr.requestSession('immersive-ar', {
+        requiredFeatures: ['hit-test'],
+        optionalFeatures: ['dom-overlay'],
+        domOverlay: { root: document.getElementById('webxr-ui') }
+      });
       
-      // Create QR code image
-      const qrImage = document.createElement('img');
-      qrImage.src = qrApiUrl;
-      qrImage.alt = 'QR Code for AR viewing';
-      qrImage.style.width = '200px';
-      qrImage.style.height = '200px';
-      qrImage.style.borderRadius = '10px';
+      // Setup WebXR scene
+      await this.setupWebXRScene();
       
-      // Add loading placeholder while image loads
-      qrContainer.innerHTML = '<div class="qr-loading" style="display: flex; align-items: center; justify-content: center; height: 200px; color: #718096;"><i class="fas fa-spinner fa-spin" style="margin-right: 10px;"></i>Loading QR Code...</div>';
+      // Setup hit test
+      await this.setupHitTest();
       
-      // Handle image load
-      qrImage.onload = () => {
-        qrContainer.innerHTML = '';
-        qrContainer.appendChild(qrImage);
-      };
+      // Start render loop
+      this.xrSession.requestAnimationFrame(this.onXRFrame.bind(this));
       
-      // Handle image error
-      qrImage.onerror = () => {
-        console.error('QR Code generation failed');
-        qrContainer.innerHTML = '<p class="qr-error" style="text-align: center; color: #f56565;">QR Code generation failed</p>';
-      };
+      // Show WebXR UI
+      document.getElementById('webxr-ui').style.display = 'block';
+      document.getElementById('webxr-canvas').style.display = 'block';
+      
+      // Hide regular UI
+      document.getElementById('modelContainer').style.display = 'none';
+      
+      console.log('WebXR AR session started');
       
     } catch (error) {
-      console.error('QR Code generation failed:', error);
-      qrContainer.innerHTML = '<p class="qr-error" style="text-align: center; color: #f56565;">QR Code generation failed</p>';
+      console.error('Failed to start WebXR AR:', error);
+      alert('Failed to start AR. Please make sure you\'re using a compatible device and browser.');
     }
   }
 
-  // Model viewer event handlers
-  onProgress = (event) => {
-    const progressBar = event.target.querySelector('.progress-bar');
-    const updatingBar = event.target.querySelector('.update-bar');
+  async setupWebXRScene() {
+    // Get canvas and setup WebGL context
+    this.xrCanvas = document.getElementById('webxr-canvas');
+    const gl = this.xrCanvas.getContext('webgl', { xrCompatible: true });
     
-    if (updatingBar) {
-      updatingBar.style.width = `${event.detail.totalProgress * 100}%`;
+    // Setup Three.js renderer
+    this.xrRenderer = new THREE.WebGLRenderer({ 
+      canvas: this.xrCanvas, 
+      context: gl,
+      alpha: true,
+      antialias: true
+    });
+    this.xrRenderer.setPixelRatio(window.devicePixelRatio);
+    this.xrRenderer.setSize(window.innerWidth, window.innerHeight);
+    this.xrRenderer.xr.enabled = true;
+    this.xrRenderer.xr.setSession(this.xrSession);
+    
+    // Create scene
+    this.xrScene = new THREE.Scene();
+    
+    // Create camera
+    this.xrCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    
+    // Add lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    this.xrScene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(1, 1, 1);
+    this.xrScene.add(directionalLight);
+    
+    // Create reticle (targeting cursor)
+    this.createReticle();
+    
+    // Load 3D model for AR
+    await this.loadModelForAR();
+  }
+
+  createReticle() {
+    const geometry = new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2);
+    const material = new THREE.MeshBasicMaterial({ 
+      color: 0x00ff00,
+      transparent: true,
+      opacity: 0.8
+    });
+    
+    this.xrReticle = new THREE.Mesh(geometry, material);
+    this.xrReticle.visible = false;
+    this.xrScene.add(this.xrReticle);
+  }
+
+  async loadModelForAR() {
+    try {
+      const loader = new THREE.GLTFLoader();
+      const modelUrl = `${APP_CONFIG.supabaseUrl}/storage/v1/object/public/models/${this.currentModel.file_path}`;
+      
+      const gltf = await new Promise((resolve, reject) => {
+        loader.load(modelUrl, resolve, undefined, reject);
+      });
+      
+      this.xrModel = gltf.scene;
+      this.xrModel.scale.set(0.5, 0.5, 0.5); // Scale down for AR
+      
+      console.log('Model loaded for AR');
+      
+    } catch (error) {
+      console.error('Failed to load model for AR:', error);
+    }
+  }
+
+  async setupHitTest() {
+    try {
+      // Create reference space
+      this.xrRefSpace = await this.xrSession.requestReferenceSpace('local');
+      
+      // Create viewer reference space for hit testing
+      const viewerSpace = await this.xrSession.requestReferenceSpace('viewer');
+      
+      // Request hit test source
+      this.xrHitTestSource = await this.xrSession.requestHitTestSource({ space: viewerSpace });
+      
+      console.log('Hit test setup complete');
+      
+    } catch (error) {
+      console.error('Failed to setup hit test:', error);
+    }
+  }
+
+  onXRFrame(time, frame) {
+    this.xrSession.requestAnimationFrame(this.onXRFrame.bind(this));
+    
+    // Get viewer pose
+    const pose = frame.getViewerPose(this.xrRefSpace);
+    if (!pose) return;
+    
+    // Perform hit test
+    if (this.xrHitTestSource) {
+      const hitTestResults = frame.getHitTestResults(this.xrHitTestSource);
+      
+      if (hitTestResults.length > 0) {
+        const hit = hitTestResults[0];
+        const hitPose = hit.getPose(this.xrRefSpace);
+        
+        if (hitPose) {
+          // Show reticle at hit position
+          this.xrReticle.visible = true;
+          this.xrReticle.position.setFromMatrixPosition(hitPose.transform.matrix);
+          this.xrReticle.lookAt(
+            this.xrReticle.position.x,
+            this.xrReticle.position.y + 1,
+            this.xrReticle.position.z
+          );
+        }
+      } else {
+        this.xrReticle.visible = false;
+      }
     }
     
-    if (event.detail.totalProgress === 1) {
-      if (progressBar) {
-        progressBar.classList.add('hide');
-      }
-      event.target.removeEventListener('progress', this.onProgress);
-    } else {
-      if (progressBar) {
-        progressBar.classList.remove('hide');
-      }
-    }
-  };
-
-  onModelLoad() {
-    console.log('Model loaded successfully');
-    this.showMessage('Model loaded successfully! Tap "View in your space" for AR.', 'success');
+    // Render scene
+    this.xrRenderer.render(this.xrScene, this.xrCamera);
   }
 
-  onModelError(event) {
-    console.error('Model loading error:', event.detail);
-    this.showError('Failed to load 3D model');
-  }
-
-  // Control functions
-  resetView() {
-    const modelViewer = document.querySelector('model-viewer');
-    if (modelViewer) {
-      modelViewer.resetTurntableRotation();
-      modelViewer.jumpCameraToGoal();
-      this.showMessage('View reset', 'info');
+  placeModel() {
+    if (this.xrReticle.visible && this.xrModel) {
+      // Clone the model
+      const modelClone = this.xrModel.clone();
+      
+      // Position at reticle location
+      modelClone.position.copy(this.xrReticle.position);
+      modelClone.rotation.copy(this.xrReticle.rotation);
+      
+      // Add to scene
+      this.xrScene.add(modelClone);
+      this.placedModels.push(modelClone);
+      
+      console.log('Model placed in AR');
+      
+      // Provide haptic feedback if available
+      if (this.xrSession.inputSources) {
+        for (const inputSource of this.xrSession.inputSources) {
+          if (inputSource.gamepad && inputSource.gamepad.hapticActuators) {
+            inputSource.gamepad.hapticActuators[0].pulse(0.5, 100);
+          }
+        }
+      }
     }
   }
 
+  resetAR() {
+    // Remove all placed models
+    this.placedModels.forEach(model => {
+      this.xrScene.remove(model);
+    });
+    this.placedModels = [];
+    
+    console.log('AR scene reset');
+  }
+
+  async exitWebXRAR() {
+    if (this.xrSession) {
+      await this.xrSession.end();
+      this.xrSession = null;
+      
+      // Hide WebXR UI
+      document.getElementById('webxr-ui').style.display = 'none';
+      document.getElementById('webxr-canvas').style.display = 'none';
+      
+      // Show regular UI
+      document.getElementById('modelContainer').style.display = 'block';
+      
+      console.log('WebXR AR session ended');
+    }
+  }
+
+  // Regular viewer controls
   toggleRotation() {
-    const modelViewer = document.querySelector('model-viewer');
-    const toggleBtn = document.getElementById('toggleRotation');
-    
-    if (!modelViewer || !toggleBtn) return;
+    const modelViewer = document.getElementById('modelViewer');
+    const btn = document.getElementById('rotateBtn');
     
     if (this.isRotating) {
       modelViewer.removeAttribute('auto-rotate');
-      toggleBtn.innerHTML = '<i class="fas fa-play"></i> Start Rotation';
+      btn.innerHTML = '<i class="fas fa-play"></i><span>Start Rotate</span>';
       this.isRotating = false;
     } else {
       modelViewer.setAttribute('auto-rotate', '');
-      toggleBtn.innerHTML = '<i class="fas fa-pause"></i> Pause Rotation';
+      btn.innerHTML = '<i class="fas fa-sync-alt"></i><span>Auto Rotate</span>';
       this.isRotating = true;
     }
   }
 
+  resetView() {
+    const modelViewer = document.getElementById('modelViewer');
+    modelViewer.resetTurntableRotation();
+    modelViewer.jumpCameraToGoal();
+  }
+
   async takeScreenshot() {
-    const modelViewer = document.querySelector('model-viewer');
-    
-    if (!modelViewer) {
-      this.showMessage('Model viewer not found', 'error');
-      return;
-    }
-    
     try {
+      const modelViewer = document.getElementById('modelViewer');
       const screenshot = await modelViewer.toDataURL('image/png');
       
       // Create download link
       const link = document.createElement('a');
-      link.download = `${this.currentModel?.title || 'model'}-screenshot.png`;
+      link.download = `${this.currentModel.title}_screenshot.png`;
       link.href = screenshot;
       link.click();
       
@@ -368,189 +424,96 @@ class ModelViewerApp {
   }
 
   async shareModel() {
-    const currentURL = window.location.href;
-    const model = this.currentModel;
+    const modelUrl = `${APP_CONFIG.baseUrl}/viewer.html?id=${this.modelId}`;
     
     if (navigator.share) {
       try {
         await navigator.share({
-          title: model.title,
-          text: `Check out this 3D model: ${model.title}`,
-          url: currentURL
+          title: this.currentModel.title,
+          text: `Check out this 3D model: ${this.currentModel.title}`,
+          url: modelUrl
         });
       } catch (error) {
-        console.error('Share failed:', error);
-        this.copyUrl();
+        console.log('Share cancelled');
       }
     } else {
-      this.copyUrl();
+      // Fallback to clipboard
+      await navigator.clipboard.writeText(modelUrl);
+      this.showMessage('Link copied to clipboard!', 'success');
     }
   }
 
   toggleFullscreen() {
-    const fullscreenModal = document.getElementById('fullscreenModal');
-    const fullscreenViewer = document.querySelector('.fullscreen-viewer');
-    const fullscreenTitle = document.getElementById('fullscreenTitle');
-    const modelViewer = document.querySelector('model-viewer');
-    const originalParent = document.querySelector('.model-viewer-section');
-    
-    if (!fullscreenModal || !modelViewer) return;
-    
     if (!this.isFullscreen) {
-      // Enter fullscreen
-      fullscreenModal.style.display = 'flex';
-      fullscreenViewer.appendChild(modelViewer);
-      if (fullscreenTitle && this.currentModel) {
-        fullscreenTitle.textContent = this.currentModel.title;
-      }
+      document.documentElement.requestFullscreen();
       this.isFullscreen = true;
-      
-      // Update button
-      const fullscreenBtn = document.getElementById('fullscreenBtn');
-      if (fullscreenBtn) {
-        fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i> Exit Fullscreen';
-      }
+      document.getElementById('fullscreenBtn').innerHTML = '<i class="fas fa-compress"></i> Exit Fullscreen';
     } else {
-      // Exit fullscreen
-      fullscreenModal.style.display = 'none';
-      originalParent.insertBefore(modelViewer, originalParent.firstChild);
+      document.exitFullscreen();
       this.isFullscreen = false;
-      
-      // Update button
-      const fullscreenBtn = document.getElementById('fullscreenBtn');
-      if (fullscreenBtn) {
-        fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i> Fullscreen';
-      }
+      document.getElementById('fullscreenBtn').innerHTML = '<i class="fas fa-expand"></i> Fullscreen';
     }
+  }
+
+  copyModelLink() {
+    const modelUrl = `${APP_CONFIG.baseUrl}/viewer.html?id=${this.modelId}`;
+    navigator.clipboard.writeText(modelUrl);
+    this.showMessage('Link copied to clipboard!', 'success');
   }
 
   downloadQR() {
-    if (!this.qrImageUrl) {
-      this.showMessage('QR code not found', 'error');
-      return;
-    }
-    
-    try {
-      // Open QR image in new tab for download
-      window.open(this.qrImageUrl, '_blank');
-      this.showMessage('QR code opened in new tab - right-click to save!', 'success');
-    } catch (error) {
-      console.error('QR download failed:', error);
-      this.showMessage('QR download failed', 'error');
+    if (this.qrImageUrl) {
+      const link = document.createElement('a');
+      link.download = `${this.currentModel.title}_QR.png`;
+      link.href = this.qrImageUrl;
+      link.click();
     }
   }
 
-  async copyUrl() {
-    const currentURL = window.location.href;
-    
-    try {
-      await navigator.clipboard.writeText(currentURL);
-      this.showMessage('URL copied to clipboard!', 'success');
-    } catch (error) {
-      console.error('Copy failed:', error);
-      this.showMessage('Failed to copy URL', 'error');
+  // Utility methods
+  getUrlParameter(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+  }
+
+  updateLoadingText(text) {
+    const loadingText = document.getElementById('loadingText');
+    if (loadingText) {
+      loadingText.textContent = text;
     }
   }
 
-  // UI State Management
-  showLoading() {
-    document.getElementById('loadingState').style.display = 'flex';
-    document.getElementById('errorState').style.display = 'none';
-    document.getElementById('mainContent').style.display = 'none';
+  showMainContent() {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('modelContainer').style.display = 'block';
+    document.getElementById('qrSection').style.display = 'block';
+    document.getElementById('modelInfo').style.display = 'block';
   }
 
   showError(message) {
-    document.getElementById('loadingState').style.display = 'none';
-    document.getElementById('errorState').style.display = 'flex';
-    document.getElementById('mainContent').style.display = 'none';
-    
-    // Update error message if element exists
-    const errorContent = document.querySelector('.error-content p');
-    if (errorContent) {
-      errorContent.textContent = message;
-    }
-  }
-
-  showContent() {
-    document.getElementById('loadingState').style.display = 'none';
-    document.getElementById('errorState').style.display = 'none';
-    document.getElementById('mainContent').style.display = 'block';
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('errorMessage').textContent = message;
+    document.getElementById('errorScreen').style.display = 'block';
   }
 
   showMessage(message, type = 'info') {
-    // Create message element
-    const messageElement = document.createElement('div');
-    messageElement.className = `status-message ${type}`;
-    messageElement.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-        <span>${message}</span>
-      </div>
-    `;
+    // Create toast notification
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
     
-    // Add to page
-    document.body.appendChild(messageElement);
-    
-    // Position message
-    messageElement.style.position = 'fixed';
-    messageElement.style.top = '20px';
-    messageElement.style.right = '20px';
-    messageElement.style.zIndex = '1000';
-    messageElement.style.background = 'white';
-    messageElement.style.padding = '15px 20px';
-    messageElement.style.borderRadius = '10px';
-    messageElement.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
-    messageElement.style.borderLeft = `4px solid ${
-      type === 'success' ? '#48bb78' : 
-      type === 'error' ? '#f56565' : 
-      '#4299e1'
-    }`;
+    document.body.appendChild(toast);
     
     // Auto remove after 3 seconds
     setTimeout(() => {
-      if (messageElement.parentNode) {
-        messageElement.parentNode.removeChild(messageElement);
-      }
+      toast.remove();
     }, 3000);
-  }
-
-  // Utility functions
-  formatFileSize(bytes) {
-    if (!bytes) return '0 B';
-    
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-  }
-
-  formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  }
-
-  formatTags(tags) {
-    if (!tags || tags.length === 0) return '';
-    
-    return tags.map(tag => 
-      `<span class="tag">${this.escapeHtml(tag)}</span>`
-    ).join('');
-  }
-
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
   }
 }
 
-// Initialize app when DOM is loaded
+// Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-  window.viewerApp = new ModelViewerApp();
+  new WebXRModelViewer();
 });
 
 // Handle mobile-specific optimizations

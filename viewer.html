@@ -25,165 +25,139 @@
         </div>
       </nav>
 
-      <!-- Loading State -->
-      <div id="loadingState" class="loading-state">
+      <!-- Loading Screen -->
+      <div id="loadingScreen" class="loading-screen">
         <div class="loading-content">
-          <i class="fas fa-spinner fa-spin loading-icon"></i>
-          <h2>Loading Model...</h2>
-          <p>Please wait while we prepare your 3D model</p>
+          <div class="loading-spinner"></div>
+          <h2>Loading 3D Model...</h2>
+          <p id="loadingText">Initializing viewer...</p>
         </div>
       </div>
 
-      <!-- Error State -->
-      <div id="errorState" class="error-state" style="display: none;">
+      <!-- Error Screen -->
+      <div id="errorScreen" class="error-screen" style="display: none;">
         <div class="error-content">
-          <i class="fas fa-exclamation-triangle error-icon"></i>
-          <h2>Model Not Found</h2>
-          <p>The requested 3D model could not be loaded.</p>
-          <a href="gallery.html" class="error-btn">
-            <i class="fas fa-arrow-left"></i> Return to Gallery
-          </a>
-        </div>
-      </div>
-
-      <!-- Main Content -->
-      <div id="mainContent" style="display: none;">
-        <header class="model-header">
-          <div class="model-title-section">
-            <h1 id="modelTitle">Loading...</h1>
-            <p id="modelDescription">Loading description...</p>
-          </div>
-          <div class="model-meta-section">
-            <div class="model-stats">
-              <span class="stat-item">
-                <i class="fas fa-file"></i>
-                <span id="modelSize">-</span>
-              </span>
-              <span class="stat-item">
-                <i class="fas fa-calendar"></i>
-                <span id="modelDate">-</span>
-              </span>
-            </div>
-            <div class="model-tags" id="modelTags">
-              <!-- Tags will be loaded here -->
-            </div>
-          </div>
-        </header>
-
-        <div class="viewer-content">
-          <div class="model-viewer-section">
-            <!-- <model-viewer> HTML element -->
-            <model-viewer 
-              id="modelViewer"
-              ar 
-              ar-modes="webxr scene-viewer quick-look" 
-              camera-controls 
-              tone-mapping="neutral" 
-              shadow-intensity="1"
-              auto-rotate
-              rotation-per-second="30deg"
-              loading="lazy"
-              reveal="interaction">
-              
-              <div class="progress-bar hide" slot="progress-bar">
-                  <div class="update-bar"></div>
-              </div>
-              
-              <button slot="ar-button" id="ar-button">
-                  <i class="fas fa-mobile-alt"></i> View in your space
-              </button>
-              
-              <div id="ar-prompt">
-                  <img src="extracted_models/ar_hand_prompt.png" alt="AR Hand Prompt">
-              </div>
-            </model-viewer>
-
-            <div class="model-controls">
-              <button id="resetView" class="control-btn">
-                <i class="fas fa-refresh"></i> Reset View
-              </button>
-              <button id="toggleRotation" class="control-btn">
-                <i class="fas fa-pause"></i> Pause Rotation
-              </button>
-              <button id="takeScreenshot" class="control-btn">
-                <i class="fas fa-camera"></i> Screenshot
-              </button>
-            </div>
-          </div>
-
-          <div class="qr-sidebar">
-            <div class="qr-container">
-              <h3><i class="fas fa-qrcode"></i> Scan for Mobile AR</h3>
-              <div id="qrcode" class="qr-display"></div>
-              <div class="qr-info">
-                <p><strong>How to use AR:</strong></p>
-                <ol>
-                  <li>Scan this QR code with your mobile device</li>
-                  <li>Open the link in your mobile browser</li>
-                  <li>Tap "View in your space" for AR experience</li>
-                  <li>Point your camera where you want to place the model</li>
-                  <li>Tap to place and interact with the 3D model</li>
-                </ol>
-              </div>
-              <div class="qr-actions">
-                <button id="downloadQR" class="qr-action-btn">
-                  <i class="fas fa-download"></i> Download QR
-                </button>
-                <button id="copyUrl" class="qr-action-btn">
-                  <i class="fas fa-copy"></i> Copy URL
-                </button>
-              </div>
-            </div>
-
-            <!-- Model Information -->
-            <div class="model-info-panel">
-              <h3><i class="fas fa-info-circle"></i> AR Compatibility</h3>
-              <div class="info-grid">
-                <div class="info-item">
-                  <span class="info-label">Format:</span>
-                  <span class="info-value">GLB</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">iOS AR:</span>
-                  <span class="info-value">Safari 12+ (Quick Look)</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">Android AR:</span>
-                  <span class="info-value">Chrome 67+ (Scene Viewer)</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">WebXR:</span>
-                  <span class="info-value">Chrome 79+, Edge 79+</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">File Size:</span>
-                  <span class="info-value" id="fileSize">-</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Fullscreen Modal -->
-    <div id="fullscreenModal" class="fullscreen-modal" style="display: none;">
-      <div class="fullscreen-content">
-        <div class="fullscreen-header">
-          <h3 id="fullscreenTitle">Model Title</h3>
-          <button id="closeFullscreen" class="close-btn">
-            <i class="fas fa-times"></i>
+          <i class="fas fa-exclamation-triangle"></i>
+          <h2>Error Loading Model</h2>
+          <p id="errorMessage">Something went wrong. Please try again.</p>
+          <button onclick="location.reload()" class="retry-btn">
+            <i class="fas fa-redo"></i> Retry
           </button>
         </div>
-        <div class="fullscreen-viewer">
-          <!-- Model viewer will be moved here in fullscreen mode -->
+      </div>
+
+      <!-- Model Viewer -->
+      <div id="modelContainer" class="model-container" style="display: none;">
+        <model-viewer 
+          id="modelViewer"
+          ar
+          ar-modes="webxr scene-viewer quick-look"
+          ar-scale="auto"
+          camera-controls 
+          touch-action="pan-y"
+          auto-rotate
+          auto-rotate-delay="3000"
+          rotation-per-second="30deg"
+          shadow-intensity="1"
+          environment-image="neutral"
+          exposure="1"
+          shadow-softness="0.25">
+          
+          <div class="progress-bar" id="progress-bar" slot="progress-bar">
+            <div class="update-bar"></div>
+          </div>
+          
+          <button slot="ar-button" id="ar-button" class="ar-button">
+            <i class="fas fa-cube"></i>
+            View in AR
+          </button>
+        </model-viewer>
+
+        <!-- WebXR AR Button -->
+        <button id="webxr-ar-button" class="webxr-ar-button" style="display: none;">
+          <i class="fas fa-magic"></i>
+          Enhanced AR (WebXR)
+        </button>
+
+        <!-- Controls -->
+        <div class="controls">
+          <button id="rotateBtn" class="control-btn">
+            <i class="fas fa-sync-alt"></i>
+            <span>Auto Rotate</span>
+          </button>
+          <button id="resetBtn" class="control-btn">
+            <i class="fas fa-home"></i>
+            <span>Reset View</span>
+          </button>
+          <button id="screenshotBtn" class="control-btn">
+            <i class="fas fa-camera"></i>
+            <span>Screenshot</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- QR Code Section -->
+      <div id="qrSection" class="qr-section" style="display: none;">
+        <h3><i class="fas fa-qrcode"></i> Scan for Mobile AR</h3>
+        <div class="qr-container">
+          <img id="qrImage" alt="QR Code for AR viewing" />
+        </div>
+        <p class="qr-instructions">
+          <i class="fas fa-mobile-alt"></i>
+          Scan this QR code with your mobile device to view the model in AR
+        </p>
+        <div class="qr-actions">
+          <button id="copyLinkBtn" class="qr-btn">
+            <i class="fas fa-copy"></i> Copy Link
+          </button>
+          <button id="downloadQRBtn" class="qr-btn">
+            <i class="fas fa-download"></i> Download QR
+          </button>
+        </div>
+      </div>
+
+      <!-- Model Info -->
+      <div id="modelInfo" class="model-info" style="display: none;">
+        <h2 id="modelTitle">3D Model</h2>
+        <p id="modelDescription">Interactive 3D model with AR support</p>
+        <div class="model-stats">
+          <div class="stat">
+            <i class="fas fa-file-alt"></i>
+            <span id="modelSize">Loading...</span>
+          </div>
+          <div class="stat">
+            <i class="fas fa-calendar"></i>
+            <span id="modelDate">Loading...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- WebXR AR Canvas (Hidden by default) -->
+      <canvas id="webxr-canvas" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;"></canvas>
+      
+      <!-- WebXR AR UI -->
+      <div id="webxr-ui" style="display: none; position: fixed; top: 20px; left: 20px; right: 20px; z-index: 10000;">
+        <div class="webxr-controls">
+          <button id="webxr-place-btn" class="webxr-btn">
+            <i class="fas fa-hand-pointer"></i> Tap to Place
+          </button>
+          <button id="webxr-reset-btn" class="webxr-btn">
+            <i class="fas fa-redo"></i> Reset
+          </button>
+          <button id="webxr-exit-btn" class="webxr-btn webxr-exit">
+            <i class="fas fa-times"></i> Exit AR
+          </button>
+        </div>
+        <div class="webxr-instructions">
+          <p><i class="fas fa-info-circle"></i> Move your device to find surfaces, then tap to place the model</p>
         </div>
       </div>
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <script src="https://unpkg.com/three@0.150.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.150.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="config.js"></script>
     <script src="database.js"></script>
     <script src="viewer.js"></script>
