@@ -68,6 +68,7 @@ class ModelViewerApp {
     const closeFullscreenBtn = document.getElementById('closeFullscreen');
     const downloadQRBtn = document.getElementById('downloadQR');
     const copyUrlBtn = document.getElementById('copyUrl');
+    const enhancedARBtn = document.getElementById('enhancedAR');
 
     if (resetBtn) {
       resetBtn.addEventListener('click', () => this.resetView());
@@ -99,6 +100,10 @@ class ModelViewerApp {
     
     if (copyUrlBtn) {
       copyUrlBtn.addEventListener('click', () => this.copyUrl());
+    }
+
+    if (enhancedARBtn) {
+      enhancedARBtn.addEventListener('click', () => this.openEnhancedAR());
     }
 
     // Keyboard shortcuts
@@ -434,6 +439,17 @@ class ModelViewerApp {
       console.error('Copy failed:', error);
       this.showMessage('Failed to copy URL', 'error');
     }
+  }
+
+  openEnhancedAR() {
+    if (!this.modelId) {
+      this.showMessage('Model not loaded', 'error');
+      return;
+    }
+    
+    const arUrl = `${APP_CONFIG.baseUrl}/ar-viewer.html?id=${this.modelId}`;
+    window.open(arUrl, '_blank');
+    this.showMessage('Enhanced AR viewer opened! Better surface placement and tracking.', 'success');
   }
 
   // UI State Management

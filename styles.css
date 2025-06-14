@@ -458,6 +458,14 @@ model-viewer {
   transform: translateY(0);
 }
 
+.enhanced-ar-control {
+  background: linear-gradient(135deg, #9f7aea 0%, #667eea 100%);
+}
+
+.enhanced-ar-control:hover {
+  background: linear-gradient(135deg, #805ad5 0%, #5a67d8 100%);
+}
+
 /* QR Code Section */
 .qr-section {
   background: rgba(255, 255, 255, 0.95);
