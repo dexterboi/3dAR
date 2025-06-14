@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>3D Model Viewer & AR</title>
+    <meta charset="utf-8">
+    <meta name="description" content="3D Model Viewer with QR Code for AR">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link type="text/css" href="./styles.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1><i class="fas fa-cube"></i> 3D Model Viewer & AR</h1>
+        <p>View your 3D model in the browser or scan the QR code for AR on mobile</p>
+      </header>
+
+      <div class="main-content">
+        <div class="model-section">
+          <!-- <model-viewer> HTML element -->
+          <model-viewer 
+            src="extracted_models/Jug_Pulmo_plus.glb" 
+            ar ar-modes="webxr scene-viewer quick-look" 
+            camera-controls 
+            tone-mapping="neutral" 
+            poster="extracted_models/poster.webp" 
+            shadow-intensity="1"
+            auto-rotate
+            rotation-per-second="30deg">
+            
+            <div class="progress-bar hide" slot="progress-bar">
+                <div class="update-bar"></div>
+            </div>
+            
+            <button slot="ar-button" id="ar-button">
+                <i class="fas fa-mobile-alt"></i> View in your space
+            </button>
+            
+            <div id="ar-prompt">
+                <img src="extracted_models/ar_hand_prompt.png">
+            </div>
+          </model-viewer>
+
+          <div class="model-controls">
+            <button id="resetView" class="control-btn">
+              <i class="fas fa-refresh"></i> Reset View
+            </button>
+            <button id="toggleRotation" class="control-btn">
+              <i class="fas fa-pause"></i> Pause Rotation
+            </button>
+          </div>
+        </div>
+
+        <div class="qr-section">
+          <div class="qr-container">
+            <h3><i class="fas fa-qrcode"></i> Scan for Mobile AR</h3>
+            <div id="qrcode"></div>
+            <div class="qr-info">
+              <p><strong>How to use:</strong></p>
+              <ol>
+                <li>Scan this QR code with your mobile device</li>
+                <li>Open the link in your mobile browser</li>
+                <li>Tap "View in your space" for AR experience</li>
+                <li>Point your camera where you want to place the model</li>
+              </ol>
+            </div>
+            <button id="copyUrl" class="control-btn">
+              <i class="fas fa-copy"></i> Copy URL
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <h3><i class="fas fa-info-circle"></i> About This Model</h3>
+        <div class="model-info">
+          <div class="info-item">
+            <span class="info-label">Model:</span>
+            <span class="info-value">Jug_Pulmo_plus.glb</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">AR Support:</span>
+            <span class="info-value">WebXR, Scene Viewer, Quick Look</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Compatible:</span>
+            <span class="info-value">iOS Safari, Android Chrome, Desktop</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Include QR Code library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <!-- Loads <model-viewer> for browsers -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html> 

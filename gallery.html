@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>3D Model Gallery & AR</title>
+    <meta charset="utf-8">
+    <meta name="description" content="3D Model Gallery with Upload and AR QR Codes">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link type="text/css" href="./styles.css" rel="stylesheet"/>
+    <link type="text/css" href="./gallery-styles.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1><i class="fas fa-cubes"></i> 3D Model Gallery & AR</h1>
+        <p>Upload, view, and share your 3D models with AR functionality</p>
+      </header>
+
+      <!-- Upload Section -->
+      <div class="upload-section">
+        <div class="upload-container">
+          <h2><i class="fas fa-cloud-upload-alt"></i> Upload New Model</h2>
+          
+          <div class="upload-area" id="uploadArea">
+            <div class="upload-content">
+              <i class="fas fa-file-upload upload-icon"></i>
+              <p class="upload-text">Drag & drop your GLB file here or click to browse</p>
+              <p class="upload-subtext">Maximum file size: 50MB • Supported formats: GLB, GLTF</p>
+              <input type="file" id="fileInput" accept=".glb,.gltf" hidden>
+              <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                <i class="fas fa-folder-open"></i> Browse Files
+              </button>
+            </div>
+          </div>
+
+          <!-- Upload Form -->
+          <div class="upload-form" id="uploadForm" style="display: none;">
+            <div class="form-group">
+              <label for="modelTitle">Model Title</label>
+              <input type="text" id="modelTitle" placeholder="Enter model title" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="modelDescription">Description</label>
+              <textarea id="modelDescription" placeholder="Describe your 3D model" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="modelTags">Tags (comma separated)</label>
+              <input type="text" id="modelTags" placeholder="architecture, furniture, design">
+            </div>
+            
+            <div class="form-actions">
+              <button type="button" class="cancel-btn" onclick="cancelUpload()">
+                <i class="fas fa-times"></i> Cancel
+              </button>
+              <button type="button" class="submit-btn" onclick="uploadModel()">
+                <i class="fas fa-upload"></i> Upload Model
+              </button>
+            </div>
+          </div>
+
+          <!-- Upload Progress -->
+          <div class="upload-progress" id="uploadProgress" style="display: none;">
+            <div class="progress-info">
+              <span class="progress-text">Uploading...</span>
+              <span class="progress-percentage">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search and Filter Section -->
+      <div class="search-section">
+        <div class="search-container">
+          <div class="search-box">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="searchInput" placeholder="Search models..." class="search-input">
+            <button class="search-btn" onclick="searchModels()">
+              <i class="fas fa-search"></i>
+            </button>
+          </div>
+          
+          <div class="filter-options">
+            <select id="sortSelect" onchange="sortModels()">
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="name">Name A-Z</option>
+              <option value="size">File Size</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Models Gallery -->
+      <div class="gallery-section">
+        <div class="gallery-header">
+          <h2><i class="fas fa-th-large"></i> Your 3D Models</h2>
+          <span class="model-count" id="modelCount">Loading...</span>
+        </div>
+        
+        <div class="models-grid" id="modelsGrid">
+          <!-- Models will be loaded here dynamically -->
+          <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading models...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Model Card Template -->
+    <template id="modelCardTemplate">
+      <div class="model-card" data-model-id="">
+        <div class="model-preview">
+          <div class="model-thumbnail">
+            <i class="fas fa-cube model-icon"></i>
+            <div class="model-overlay">
+              <button class="view-btn" onclick="viewModel('{id}')">
+                <i class="fas fa-eye"></i> View
+              </button>
+              <button class="ar-btn" onclick="openAR('{id}')">
+                <i class="fas fa-mobile-alt"></i> AR
+              </button>
+            </div>
+          </div>
+          
+          <div class="qr-code-container">
+            <div class="qr-code" id="qr-{id}"></div>
+            <div class="qr-actions">
+              <button class="qr-btn" onclick="downloadQR('{id}', '{title}')">
+                <i class="fas fa-download"></i>
+              </button>
+              <button class="share-btn" onclick="shareModel('{id}')">
+                <i class="fas fa-share-alt"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="model-info">
+          <h3 class="model-title">{title}</h3>
+          <p class="model-description">{description}</p>
+          
+          <div class="model-meta">
+            <span class="model-size">
+              <i class="fas fa-file"></i> {size}
+            </span>
+            <span class="model-date">
+              <i class="fas fa-calendar"></i> {date}
+            </span>
+          </div>
+          
+          <div class="model-tags">
+            {tags}
+          </div>
+          
+          <div class="model-actions">
+            <button class="action-btn edit-btn" onclick="editModel('{id}')">
+              <i class="fas fa-edit"></i> Edit
+            </button>
+            <button class="action-btn delete-btn" onclick="deleteModel('{id}')">
+              <i class="fas fa-trash"></i> Delete
+            </button>
+            <button class="action-btn copy-link-btn" onclick="copyModelLink('{id}')">
+              <i class="fas fa-link"></i> Copy Link
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Loading and Status Messages -->
+    <div class="status-messages" id="statusMessages"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="database.js"></script>
+    <script src="gallery.js"></script>
+  </body>
+</html> 

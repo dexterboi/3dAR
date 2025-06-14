@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .qr-display {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔗 New QR Code System Test</h1>
+        <p>Testing the reliable QR Server API approach</p>
+        
+        <div class="qr-display" id="qrDisplay">
+            <p>Click the button below to generate a QR code</p>
+        </div>
+        
+        <button onclick="generateTestQR()">Generate QR Code</button>
+        <button onclick="downloadQR()" id="downloadBtn" style="display: none;">Download QR</button>
+        
+        <div style="margin-top: 30px; text-align: left;">
+            <h3>✅ Advantages of New System:</h3>
+            <ul>
+                <li><strong>No external libraries</strong> - Faster loading</li>
+                <li><strong>Reliable API</strong> - QR Server is stable and free</li>
+                <li><strong>Instant generation</strong> - No waiting for JS libraries</li>
+                <li><strong>Better error handling</strong> - Graceful fallbacks</li>
+                <li><strong>Smaller bundle size</strong> - Removed QRCode.js dependency</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let currentQRUrl = null;
+        
+        function generateTestQR() {
+            const qrDisplay = document.getElementById('qrDisplay');
+            const testUrl = window.location.href;
+            
+            // Show loading
+            qrDisplay.innerHTML = '<p>🔄 Generating QR code...</p>';
+            
+            // Generate QR using QR Server API
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(testUrl)}`;
+            currentQRUrl = qrApiUrl;
+            
+            // Create image
+            const img = document.createElement('img');
+            img.src = qrApiUrl;
+            img.alt = 'Test QR Code';
+            img.style.borderRadius = '8px';
+            img.style.maxWidth = '200px';
+            
+            img.onload = () => {
+                qrDisplay.innerHTML = '<p>✅ QR Code Generated Successfully!</p>';
+                qrDisplay.appendChild(img);
+                document.getElementById('downloadBtn').style.display = 'inline-block';
+            };
+            
+            img.onerror = () => {
+                qrDisplay.innerHTML = '<p style="color: red;">❌ QR generation failed</p>';
+            };
+        }
+        
+        function downloadQR() {
+            if (currentQRUrl) {
+                window.open(currentQRUrl, '_blank');
+                alert('QR code opened in new tab - right-click to save!');
+            }
+        }
+    </script>
+</body>
+</html> 
