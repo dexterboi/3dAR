@@ -1,7 +1,3 @@
-// Import Three.js as ES modules
-import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
-import { GLTFLoader } from 'https://unpkg.com/three@0.158.0/examples/jsm/loaders/GLTFLoader.js';
-
 // WebXR AR Model Viewer with Hit Test
 class WebXRModelViewer {
   constructor() {
@@ -284,7 +280,7 @@ class WebXRModelViewer {
 
   async loadModelForAR() {
     try {
-      const loader = new GLTFLoader();
+      const loader = new THREE.GLTFLoader();
       const modelUrl = `${SUPABASE_CONFIG.url}/storage/v1/object/public/models/${this.currentModel.file_path}`;
       
       const gltf = await new Promise((resolve, reject) => {
