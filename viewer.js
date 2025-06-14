@@ -1,3 +1,7 @@
+// Import Three.js as ES modules
+import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
+import { GLTFLoader } from 'https://unpkg.com/three@0.158.0/examples/jsm/loaders/GLTFLoader.js';
+
 // WebXR AR Model Viewer with Hit Test
 class WebXRModelViewer {
   constructor() {
@@ -29,15 +33,18 @@ class WebXRModelViewer {
     this.modelId = this.getUrlParameter('id');
     
     if (!this.modelId) {
-      // For testing, use a default model ID if none provided
-      console.warn('No model ID provided in URL, using test mode');
-      this.showError('No model ID provided. Add ?id=YOUR_MODEL_ID to the URL');
+      // For testing, show a demo mode
+      console.warn('No model ID provided in URL, entering demo mode');
+      this.showDemoMode();
       return;
     }
     
+    // Wait for database to be available
+    await this.waitForDatabase();
+    
     // Initialize database
     try {
-      const initialized = await modelDB.init();
+      const initialized = await window.modelDB.init();
       if (!initialized) {
         this.showError('Database connection failed');
         return;
@@ -58,11 +65,24 @@ class WebXRModelViewer {
     this.checkWebXRSupport();
   }
 
+  async waitForDatabase() {
+    // Wait for database to be loaded
+    let attempts = 0;
+    while (!window.modelDB && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+    
+    if (!window.modelDB) {
+      throw new Error('Database not available');
+    }
+  }
+
   async loadModelData() {
     try {
       this.updateLoadingText('Loading model data...');
       
-      const model = await modelDB.getModel(this.modelId);
+      const model = await window.modelDB.getModel(this.modelId);
       if (!model) {
         this.showError('Model not found');
         return;
@@ -93,7 +113,7 @@ class WebXRModelViewer {
       this.updateLoadingText('Loading 3D model...');
       
       const modelViewer = document.getElementById('modelViewer');
-      const modelUrl = `${APP_CONFIG.supabaseUrl}/storage/v1/object/public/models/${model.file_path}`;
+      const modelUrl = `${SUPABASE_CONFIG.url}/storage/v1/object/public/models/${model.file_path}`;
       
       modelViewer.src = modelUrl;
       
@@ -264,8 +284,8 @@ class WebXRModelViewer {
 
   async loadModelForAR() {
     try {
-      const loader = new THREE.GLTFLoader();
-      const modelUrl = `${APP_CONFIG.supabaseUrl}/storage/v1/object/public/models/${this.currentModel.file_path}`;
+      const loader = new GLTFLoader();
+      const modelUrl = `${SUPABASE_CONFIG.url}/storage/v1/object/public/models/${this.currentModel.file_path}`;
       
       const gltf = await new Promise((resolve, reject) => {
         loader.load(modelUrl, resolve, undefined, reject);
@@ -542,6 +562,51 @@ class WebXRModelViewer {
     setTimeout(() => {
       toast.remove();
     }, 3000);
+  }
+
+  showDemoMode() {
+    const loadingScreen = document.getElementById('loadingScreen');
+    const modelContainer = document.getElementById('modelContainer');
+    const qrSection = document.getElementById('qrSection');
+    const modelInfo = document.getElementById('modelInfo');
+    
+    if (loadingScreen) {
+      loadingScreen.style.display = 'none';
+    }
+    
+    if (modelContainer) {
+      modelContainer.style.display = 'block';
+      // Show a demo message in the model viewer
+      const modelViewer = document.getElementById('modelViewer');
+      if (modelViewer) {
+        modelViewer.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; padding: 40px;">
+            <div>
+              <i class="fas fa-cube" style="font-size: 4rem; margin-bottom: 20px; opacity: 0.8;"></i>
+              <h2 style="margin: 0 0 15px;">Demo Mode</h2>
+              <p style="margin: 0 0 20px; opacity: 0.9;">No model ID provided in URL</p>
+              <p style="margin: 0; font-size: 0.9rem; opacity: 0.7;">Add ?id=YOUR_MODEL_ID to view a specific model</p>
+            </div>
+          </div>
+        `;
+      }
+    }
+    
+    if (modelInfo) {
+      modelInfo.style.display = 'block';
+      document.getElementById('modelTitle').textContent = 'Demo Mode';
+      document.getElementById('modelDescription').textContent = 'This is a demo of the 3D model viewer. Upload models in the gallery to view them here.';
+      document.getElementById('modelSize').textContent = 'N/A';
+      document.getElementById('modelDate').textContent = 'N/A';
+    }
+    
+    // Hide QR section in demo mode
+    if (qrSection) {
+      qrSection.style.display = 'none';
+    }
+    
+    // Setup basic event listeners
+    this.setupEventListeners();
   }
 }
 
