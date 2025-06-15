@@ -233,7 +233,7 @@ class ModelGalleryApp {
       if (element) element.value = '';
     });
     
-    // Reset height unit to default
+    // Reset units to default
     const heightUnit = document.getElementById('modelHeightUnit');
     if (heightUnit) heightUnit.value = 'cm';
     

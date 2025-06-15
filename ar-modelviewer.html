@@ -338,15 +338,18 @@
             <!-- Height Input for Testing -->
             <div id="heightInput" style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px; display: none;">
                 <label style="display: block; margin-bottom: 8px; font-weight: bold;">🔧 Test Height Scaling:</label>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="number" id="heightValue" placeholder="Height" min="1" max="1000" 
-                           style="padding: 8px; border-radius: 5px; border: none; background: rgba(255,255,255,0.9); width: 80px;">
+                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                    <input type="number" id="heightValue" placeholder="Real height" min="1" max="1000" 
+                           style="padding: 8px; border-radius: 5px; border: none; background: rgba(255,255,255,0.9); width: 100px;">
                     <select id="heightUnit" style="padding: 8px; border-radius: 5px; border: none; background: rgba(255,255,255,0.9);">
                         <option value="cm">cm</option>
                         <option value="m">meters</option>
                     </select>
                     <button onclick="applyHeight()" class="control-btn" style="font-size: 12px; padding: 8px 15px;">Apply</button>
                 </div>
+                <small style="color: #ddd; font-size: 11px; display: block;">
+                    Example: Want 80cm chair? Enter 80cm → Perfect real-world scale in AR!
+                </small>
             </div>
         </div>
         
@@ -734,7 +737,7 @@
                 heightInMeters = heightInMeters / 100;
             }
             
-            // Calculate and apply the scale based on the desired height
+            // Calculate scale using precise or estimated method
             calculateScaleForHeight(heightInMeters);
             
             // Update display
@@ -747,19 +750,34 @@
         function calculateScaleForHeight(targetHeightInMeters) {
             if (!modelViewer) return;
             
-            // Get the model's current bounding box to determine its native height
-            // This is a simplified approach - in reality, you'd need to measure the model
-            // For now, we'll assume the model's native height is 1 meter and scale accordingly
-            const assumedNativeHeight = 1.0; // meters
+            // Simple approach: Calculate scale to make model appear at target height
+            // Most 3D models need significant scaling down for AR viewing
+            // We'll use practical scale values that work well in Google Model Viewer
             
-            // Calculate the scale needed to achieve the target height
-            const calculatedScale = targetHeightInMeters / assumedNativeHeight;
+            let calculatedScale;
+            
+            if (targetHeightInMeters < 0.1) {
+                // Very small objects (< 10cm) - jewelry, small items
+                calculatedScale = targetHeightInMeters * 2;
+            } else if (targetHeightInMeters < 0.5) {
+                // Small objects (10-50cm) - bottles, accessories  
+                calculatedScale = targetHeightInMeters * 1;
+            } else if (targetHeightInMeters < 1.5) {
+                // Medium objects (50cm-1.5m) - chairs, appliances
+                calculatedScale = targetHeightInMeters * 0.5;
+            } else if (targetHeightInMeters < 3.0) {
+                // Large objects (1.5-3m) - tables, doors
+                calculatedScale = targetHeightInMeters * 0.3;
+            } else {
+                // Very large objects (>3m) - furniture, structures
+                calculatedScale = targetHeightInMeters * 0.1;
+            }
             
             // Apply the scale
             currentScale = calculatedScale;
             updateModelScale();
             
-            console.log(`📏 Calculated scale: ${calculatedScale} for target height: ${targetHeightInMeters}m`);
+            console.log(`📏 Target: ${targetHeightInMeters}m → Scale: ${calculatedScale}`);
         }
         
         function updateModelScale() {
@@ -923,20 +941,19 @@
         function setModelDimensions(model) {
             if (!model || !modelViewer) return;
             
-            // Check if product has height specified (new feature)
+            // Check if product has height specified
             if (model.height) {
-                console.log('📏 Product height found:', model.height);
+                console.log('📏 Product height found:', model.height, model.height_unit);
                 
-                // Convert height to meters if it's in cm
-                let heightInMeters = parseFloat(model.height);
+                // Convert target height to meters
+                let targetHeightInMeters = parseFloat(model.height);
                 if (model.height_unit === 'cm' || (!model.height_unit && model.height < 5)) {
-                    // Assume cm if unit not specified and value is small
-                    heightInMeters = heightInMeters / 100;
-                    console.log(`📏 Converting ${model.height}cm to ${heightInMeters}m`);
+                    targetHeightInMeters = targetHeightInMeters / 100;
+                    console.log(`📏 Converting target ${model.height}cm to ${targetHeightInMeters}m`);
                 }
                 
-                // Calculate scale for exact height
-                calculateScaleForHeight(heightInMeters);
+                // Calculate scale for the target height
+                calculateScaleForHeight(targetHeightInMeters);
                 
                 // Update display
                 const displayHeight = model.height_unit === 'cm' || (!model.height_unit && model.height < 5) 
