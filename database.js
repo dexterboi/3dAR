@@ -76,6 +76,8 @@ class ModelDatabase {
         file_size: file.size,
         upload_date: new Date().toISOString(),
         tags: metadata.tags || [],
+        height: metadata.height || null,
+        height_unit: metadata.height_unit || null,
         is_public: metadata.isPublic !== false
       };
 

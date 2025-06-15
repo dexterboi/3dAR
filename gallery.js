@@ -152,6 +152,8 @@ class ModelGalleryApp {
     const title = document.getElementById('modelTitle')?.value?.trim();
     const description = document.getElementById('modelDescription')?.value?.trim();
     const tags = document.getElementById('modelTags')?.value?.trim();
+    const height = document.getElementById('modelHeight')?.value?.trim();
+    const heightUnit = document.getElementById('modelHeightUnit')?.value;
     
     if (!title) {
       this.showMessage('Please enter a model title', 'error');
@@ -162,6 +164,8 @@ class ModelGalleryApp {
       title,
       description,
       tags: tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
+      height: height ? parseFloat(height) : null,
+      height_unit: height ? heightUnit : null,
       isPublic: true
     };
     
@@ -224,10 +228,14 @@ class ModelGalleryApp {
     const fileInput = document.getElementById('fileInput');
     
     // Reset form fields
-    ['modelTitle', 'modelDescription', 'modelTags'].forEach(id => {
+    ['modelTitle', 'modelDescription', 'modelTags', 'modelHeight'].forEach(id => {
       const element = document.getElementById(id);
       if (element) element.value = '';
     });
+    
+    // Reset height unit to default
+    const heightUnit = document.getElementById('modelHeightUnit');
+    if (heightUnit) heightUnit.value = 'cm';
     
     // Reset file input
     if (fileInput) fileInput.value = '';
